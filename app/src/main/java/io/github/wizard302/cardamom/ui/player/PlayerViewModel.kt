@@ -26,6 +26,8 @@ class PlayerViewModel @Inject constructor(
     val shuffleEnabled = connection.shuffleEnabled
     val repeatMode = connection.repeatMode
     val queuePosition = connection.queuePosition
+    val queue = connection.queue
+    val currentIndex = connection.currentIndex
 
     /** Polled playback position; runs only while the UI collects it. */
     val positionMs: StateFlow<Long> = flow {
@@ -41,4 +43,7 @@ class PlayerViewModel @Inject constructor(
     fun seekTo(positionMs: Long) = connection.seekTo(positionMs)
     fun toggleShuffle() = connection.toggleShuffle()
     fun cycleRepeatMode() = connection.cycleRepeatMode()
+    fun seekToQueueItem(index: Int) = connection.seekToQueueItem(index)
+    fun removeQueueItem(index: Int) = connection.removeQueueItem(index)
+    fun moveQueueItem(from: Int, to: Int) = connection.moveQueueItem(from, to)
 }

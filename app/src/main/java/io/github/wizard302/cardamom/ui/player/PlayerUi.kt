@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Album
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -180,6 +181,11 @@ fun NowPlayingScreen(
     val repeatMode by viewModel.repeatMode.collectAsStateWithLifecycle()
     val queuePosition by viewModel.queuePosition.collectAsStateWithLifecycle()
 
+    var showQueue by remember { mutableStateOf(false) }
+    if (showQueue) {
+        QueueSheet(viewModel = viewModel, onDismiss = { showQueue = false })
+    }
+
     Surface(modifier = modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
@@ -210,6 +216,12 @@ fun NowPlayingScreen(
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                IconButton(onClick = { showQueue = true }) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Rounded.QueueMusic,
+                        contentDescription = stringResource(R.string.queue_open),
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.weight(1f))

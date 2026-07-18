@@ -82,6 +82,10 @@ class PlayerConnection @Inject constructor(
         override fun onTimelineChanged(timeline: androidx.media3.common.Timeline, reason: Int) {
             updateQueuePosition()
         }
+
+        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+            updateQueuePosition()
+        }
     }
 
     fun connect() {
