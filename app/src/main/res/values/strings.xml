@@ -26,6 +26,8 @@
     <string name="queue_title">Queue (%d)</string>
     <string name="queue_open">Open queue</string>
     <string name="queue_reorder">Reorder</string>
+    <string name="action_more">More</string>
+    <string name="menu_tag_editor">Edit tags</string>
 
     <string name="menu_play">Play</string>
     <string name="menu_play_next">Play next</string>
