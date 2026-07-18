@@ -3,18 +3,18 @@
 # and bump any library that fails to resolve to the latest stable.
 
 [versions]
-agp = "8.9.0"
-kotlin = "2.1.10"
-ksp = "2.1.10-1.0.31"
-coreKtx = "1.16.0"
-lifecycle = "2.9.0"
-activityCompose = "1.10.1"
-composeBom = "2025.12.01"
-media3 = "1.8.0"
-hilt = "2.56.1"
-hiltNavigationCompose = "1.2.0"
-coil = "3.2.0"
-datastore = "1.1.6"
+agp = "9.2.1"
+kotlin = "2.4.10"
+ksp = "2.3.10"
+coreKtx = "1.19.0"
+lifecycle = "2.11.0"
+activityCompose = "1.13.0"
+composeBom = "2026.06.01"
+media3 = "1.10.1"
+hilt = "2.60.1"
+hiltNavigationCompose = "1.4.0"
+coil = "3.5.0"
+datastore = "1.2.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
