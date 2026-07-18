@@ -175,18 +175,4 @@ class PlayerConnection @Inject constructor(
             else -> Player.REPEAT_MODE_OFF
         }
     }
-
-    private fun Track.toMediaItem(): MediaItem =
-        MediaItem.Builder()
-            .setMediaId(id.toString())
-            .setUri(contentUri)
-            .setMediaMetadata(
-                MediaMetadata.Builder()
-                    .setTitle(title)
-                    .setArtist(artist)
-                    .setAlbumTitle(album)
-                    .setArtworkUri(albumArtUri)
-                    .build(),
-            )
-            .build()
 }
