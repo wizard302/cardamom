@@ -20,5 +20,6 @@
     <string name="action_shuffle">Shuffle</string>
     <string name="action_repeat">Repeat</string>
     <string name="action_back">Back</string>
+    <string name="action_theme">Theme mode</string>
     <string name="unknown_artist">Unknown artist</string>
 </resources>

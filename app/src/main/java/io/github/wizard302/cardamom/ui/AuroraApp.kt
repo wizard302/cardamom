@@ -12,9 +12,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.BrightnessAuto
+import androidx.compose.material.icons.rounded.DarkMode
+import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Surface
@@ -38,6 +45,7 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.wizard302.cardamom.R
+import io.github.wizard302.cardamom.data.settings.ThemeMode
 import io.github.wizard302.cardamom.ui.library.AlbumsTab
 import io.github.wizard302.cardamom.ui.library.ArtistsTab
 import io.github.wizard302.cardamom.ui.library.LibraryViewModel
@@ -46,6 +54,7 @@ import io.github.wizard302.cardamom.ui.library.TracksTab
 import io.github.wizard302.cardamom.ui.player.MiniPlayer
 import io.github.wizard302.cardamom.ui.player.NowPlayingScreen
 import io.github.wizard302.cardamom.ui.player.PlayerViewModel
+import io.github.wizard302.cardamom.ui.settings.SettingsViewModel
 import kotlinx.coroutines.launch
 
 private val audioPermission: String =
@@ -103,6 +112,21 @@ fun CardamomApp(
 }
 
 @Composable
+private fun ThemeToggleButton(viewModel: SettingsViewModel = hiltViewModel()) {
+    val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
+    IconButton(onClick = viewModel::cycleThemeMode) {
+        Icon(
+            imageVector = when (themeMode) {
+                ThemeMode.SYSTEM -> Icons.Rounded.BrightnessAuto
+                ThemeMode.LIGHT -> Icons.Rounded.LightMode
+                ThemeMode.DARK -> Icons.Rounded.DarkMode
+            },
+            contentDescription = stringResource(R.string.action_theme),
+        )
+    }
+}
+
+@Composable
 private fun PermissionGate(onRequest: () -> Unit) {
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -157,19 +181,23 @@ private fun LibraryScaffold(
                     .statusBarsPadding()
                     .navigationBarsPadding(),
             ) {
-                ScrollableTabRow(
-                    selectedTabIndex = pagerState.currentPage,
-                    edgePadding = 0.dp,
-                ) {
-                    tabTitles.forEachIndexed { index, title ->
-                        Tab(
-                            selected = pagerState.currentPage == index,
-                            onClick = {
-                                scope.launch { pagerState.animateScrollToPage(index) }
-                            },
-                            text = { Text(title) },
-                        )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    ScrollableTabRow(
+                        selectedTabIndex = pagerState.currentPage,
+                        edgePadding = 0.dp,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        tabTitles.forEachIndexed { index, title ->
+                            Tab(
+                                selected = pagerState.currentPage == index,
+                                onClick = {
+                                    scope.launch { pagerState.animateScrollToPage(index) }
+                                },
+                                text = { Text(title) },
+                            )
+                        }
                     }
+                    ThemeToggleButton()
                 }
 
                 HorizontalPager(
