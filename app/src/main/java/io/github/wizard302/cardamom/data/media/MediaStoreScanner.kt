@@ -1,6 +1,7 @@
 package io.github.wizard302.cardamom.data.media
 
 import android.content.Context
+import android.os.Build
 import android.provider.MediaStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -13,19 +14,22 @@ class MediaStoreScanner @Inject constructor(
     @ApplicationContext private val context: Context,
 ) {
     suspend fun scanTracks(): List<Track> = withContext(Dispatchers.IO) {
-        val projection = arrayOf(
-            MediaStore.Audio.Media._ID,
-            MediaStore.Audio.Media.TITLE,
-            MediaStore.Audio.Media.ARTIST,
-            MediaStore.Audio.Media.ARTIST_ID,
-            MediaStore.Audio.Media.ALBUM,
-            MediaStore.Audio.Media.ALBUM_ID,
-            MediaStore.Audio.Media.DURATION,
-            MediaStore.Audio.Media.TRACK,
-            MediaStore.Audio.Media.YEAR,
-            MediaStore.Audio.Media.DATE_ADDED,
-            MediaStore.Audio.Media.DATA,
-        )
+        val hasBitrate = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+        val projection = buildList {
+            add(MediaStore.Audio.Media._ID)
+            add(MediaStore.Audio.Media.TITLE)
+            add(MediaStore.Audio.Media.ARTIST)
+            add(MediaStore.Audio.Media.ARTIST_ID)
+            add(MediaStore.Audio.Media.ALBUM)
+            add(MediaStore.Audio.Media.ALBUM_ID)
+            add(MediaStore.Audio.Media.DURATION)
+            add(MediaStore.Audio.Media.TRACK)
+            add(MediaStore.Audio.Media.YEAR)
+            add(MediaStore.Audio.Media.DATE_ADDED)
+            add(MediaStore.Audio.Media.DATA)
+            add(MediaStore.Audio.Media.SIZE)
+            if (hasBitrate) add(MediaStore.Audio.Media.BITRATE)
+        }.toTypedArray()
         val tracks = mutableListOf<Track>()
         try {
             context.contentResolver.query(
@@ -46,6 +50,12 @@ class MediaStoreScanner @Inject constructor(
                 val yearCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.YEAR)
                 val dateAddedCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_ADDED)
                 val dataCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA)
+                val sizeCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.SIZE)
+                val bitrateCol = if (hasBitrate) {
+                    cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.BITRATE)
+                } else {
+                    -1
+                }
 
                 while (cursor.moveToNext()) {
                     tracks += Track(
@@ -60,6 +70,8 @@ class MediaStoreScanner @Inject constructor(
                         year = cursor.getInt(yearCol),
                         dateAdded = cursor.getLong(dateAddedCol),
                         path = cursor.getString(dataCol) ?: "",
+                        sizeBytes = cursor.getLong(sizeCol),
+                        bitrate = if (bitrateCol >= 0) cursor.getInt(bitrateCol) else 0,
                     )
                 }
             }

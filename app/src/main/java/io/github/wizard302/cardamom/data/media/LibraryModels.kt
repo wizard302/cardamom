@@ -17,6 +17,10 @@ data class Track(
     val dateAdded: Long,
     /** Absolute path from MediaStore DATA column; used for the Folders tab and M3U later. */
     val path: String,
+    /** File size in bytes. */
+    val sizeBytes: Long,
+    /** Bitrate in bits per second; 0 when unknown (MediaStore reports it from API 29). */
+    val bitrate: Int,
 ) {
     val contentUri: Uri
         get() = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id)

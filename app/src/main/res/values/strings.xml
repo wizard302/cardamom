@@ -21,5 +21,27 @@
     <string name="action_repeat">Repeat</string>
     <string name="action_back">Back</string>
     <string name="action_theme">Theme mode</string>
+    <string name="action_close">Close</string>
+
+    <string name="menu_play">Play</string>
+    <string name="menu_play_next">Play next</string>
+    <string name="menu_add_to_queue">Add to queue</string>
+    <string name="menu_go_to_artist">Go to artist</string>
+    <string name="menu_go_to_album">Go to album</string>
+    <string name="menu_details">Details</string>
+
+    <string name="details_artist">Artist</string>
+    <string name="details_album">Album</string>
+    <string name="details_year">Year</string>
+    <string name="details_duration">Duration</string>
+    <string name="details_size">Size</string>
+    <string name="details_bitrate">Bitrate</string>
+    <string name="details_kbps">%d kbps</string>
+    <string name="details_path">File path</string>
+
+    <plurals name="track_count">
+        <item quantity="one">%d track</item>
+        <item quantity="other">%d tracks</item>
+    </plurals>
     <string name="unknown_artist">Unknown artist</string>
 </resources>

@@ -49,6 +49,14 @@ class PlayerConnection @Inject constructor(
     private val _queuePosition = MutableStateFlow(0 to 0)
     val queuePosition: StateFlow<Pair<Int, Int>> = _queuePosition.asStateFlow()
 
+    /** Current queue as MediaItems, in playback order. */
+    private val _queue = MutableStateFlow<List<MediaItem>>(emptyList())
+    val queue: StateFlow<List<MediaItem>> = _queue.asStateFlow()
+
+    /** Index of the item currently playing, -1 when the queue is empty. */
+    private val _currentIndex = MutableStateFlow(-1)
+    val currentIndex: StateFlow<Int> = _currentIndex.asStateFlow()
+
     private val listener = object : Player.Listener {
         override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
             _currentMetadata.value = mediaMetadata
@@ -99,8 +107,10 @@ class PlayerConnection @Inject constructor(
     }
 
     private fun updateQueuePosition() {
-        controller?.let {
-            _queuePosition.value = (it.currentMediaItemIndex + 1) to it.mediaItemCount
+        controller?.let { c ->
+            _queuePosition.value = (c.currentMediaItemIndex + 1) to c.mediaItemCount
+            _queue.value = List(c.mediaItemCount) { i -> c.getMediaItemAt(i) }
+            _currentIndex.value = if (c.mediaItemCount > 0) c.currentMediaItemIndex else -1
         }
     }
 
@@ -115,6 +125,31 @@ class PlayerConnection @Inject constructor(
         prepare()
         play()
     }
+
+    /** Inserts [tracks] right after the current item; starts playback if idle. */
+    fun playNext(tracks: List<Track>) = withController {
+        val insertAt = if (mediaItemCount == 0) 0 else currentMediaItemIndex + 1
+        addMediaItems(insertAt, tracks.map { it.toMediaItem() })
+        if (playbackState == Player.STATE_IDLE) prepare()
+        if (mediaItemCount == tracks.size) play()
+    }
+
+    /** Appends [tracks] to the end of the queue; starts playback if idle. */
+    fun addToQueue(tracks: List<Track>) = withController {
+        addMediaItems(tracks.map { it.toMediaItem() })
+        if (playbackState == Player.STATE_IDLE) prepare()
+        if (mediaItemCount == tracks.size) play()
+    }
+
+    fun seekToQueueItem(index: Int) = withController {
+        seekTo(index, 0L)
+        if (playbackState == Player.STATE_IDLE) prepare()
+        play()
+    }
+
+    fun removeQueueItem(index: Int) = withController { removeMediaItem(index) }
+
+    fun moveQueueItem(from: Int, to: Int) = withController { moveMediaItem(from, to) }
 
     fun togglePlayPause() = withController { if (isPlaying) pause() else play() }
 
