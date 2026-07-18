@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Album
@@ -44,8 +45,8 @@ fun TracksTab(
         return
     }
     LazyColumn(modifier = modifier.fillMaxSize()) {
-        items(tracks, key = { it.id }) { track ->
-            TrackRow(track = track, onClick = { onTrackClick(tracks.indexOf(track)) })
+        itemsIndexed(tracks, key = { _, track -> track.id }) { index, track ->
+            TrackRow(track = track, onClick = { onTrackClick(index) })
         }
     }
 }

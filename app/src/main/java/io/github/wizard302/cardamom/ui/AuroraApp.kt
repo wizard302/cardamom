@@ -136,11 +136,6 @@ private fun LibraryScaffold(
     val albums by libraryViewModel.albums.collectAsStateWithLifecycle()
     val artists by libraryViewModel.artists.collectAsStateWithLifecycle()
 
-    val metadata by playerViewModel.metadata.collectAsStateWithLifecycle()
-    val isPlaying by playerViewModel.isPlaying.collectAsStateWithLifecycle()
-    val positionMs by playerViewModel.positionMs.collectAsStateWithLifecycle()
-    val durationMs by playerViewModel.durationMs.collectAsStateWithLifecycle()
-
     var showNowPlaying by rememberSaveable { mutableStateOf(false) }
 
     val tabTitles = listOf(
@@ -202,16 +197,10 @@ private fun LibraryScaffold(
                     }
                 }
 
-                metadata?.let { meta ->
-                    MiniPlayer(
-                        metadata = meta,
-                        isPlaying = isPlaying,
-                        positionMs = positionMs,
-                        durationMs = durationMs,
-                        onPlayPause = playerViewModel::togglePlayPause,
-                        onClick = { showNowPlaying = true },
-                    )
-                }
+                MiniPlayer(
+                    viewModel = playerViewModel,
+                    onClick = { showNowPlaying = true },
+                )
             }
 
             if (showNowPlaying) {

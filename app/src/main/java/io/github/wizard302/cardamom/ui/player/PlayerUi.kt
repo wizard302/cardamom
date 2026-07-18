@@ -53,8 +53,34 @@ import coil3.compose.AsyncImage
 import io.github.wizard302.cardamom.R
 import io.github.wizard302.cardamom.ui.library.formatDuration
 
+/**
+ * Collects player state itself so the 500 ms position ticks recompose only this
+ * subtree, not the whole library scaffold with its lists.
+ */
 @Composable
 fun MiniPlayer(
+    viewModel: PlayerViewModel,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val metadata by viewModel.metadata.collectAsStateWithLifecycle()
+    val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()
+    val positionMs by viewModel.positionMs.collectAsStateWithLifecycle()
+    val durationMs by viewModel.durationMs.collectAsStateWithLifecycle()
+    val meta = metadata ?: return
+    MiniPlayerContent(
+        metadata = meta,
+        isPlaying = isPlaying,
+        positionMs = positionMs,
+        durationMs = durationMs,
+        onPlayPause = viewModel::togglePlayPause,
+        onClick = onClick,
+        modifier = modifier,
+    )
+}
+
+@Composable
+private fun MiniPlayerContent(
     metadata: MediaMetadata,
     isPlaying: Boolean,
     positionMs: Long,
