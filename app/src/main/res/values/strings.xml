@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Cardamom</string>
+
+    <string name="tab_artists">Artists</string>
+    <string name="tab_albums">Albums</string>
+    <string name="tab_tracks">Tracks</string>
+    <string name="tab_playlists">Playlists</string>
+    <string name="tab_folders">Folders</string>
+
+    <string name="permission_rationale">Cardamom needs access to your audio files to build the music library.</string>
+    <string name="permission_grant">Grant access</string>
+    <string name="library_empty">No music found on this device.</string>
+    <string name="placeholder_phase2">Playlists arrive in Phase 2.</string>
+
+    <string name="now_playing">Now playing</string>
+    <string name="action_play_pause">Play/Pause</string>
+    <string name="action_next">Next track</string>
+    <string name="action_previous">Previous track</string>
+    <string name="action_shuffle">Shuffle</string>
+    <string name="action_repeat">Repeat</string>
+    <string name="action_back">Back</string>
+    <string name="unknown_artist">Unknown artist</string>
+</resources>
