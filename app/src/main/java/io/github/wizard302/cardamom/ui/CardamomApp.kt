@@ -71,6 +71,7 @@ import io.github.wizard302.cardamom.ui.playlist.AddToPlaylistDialog
 import io.github.wizard302.cardamom.ui.playlist.FavoritesScreen
 import io.github.wizard302.cardamom.ui.playlist.PlaylistDetailScreen
 import io.github.wizard302.cardamom.ui.playlist.PlaylistsTab
+import io.github.wizard302.cardamom.ui.fetcher.FetcherScreen
 import io.github.wizard302.cardamom.ui.settings.SettingsViewModel
 import io.github.wizard302.cardamom.ui.tageditor.AlbumTagEditorScreen
 import io.github.wizard302.cardamom.ui.tageditor.TagEditorScreen
@@ -149,6 +150,7 @@ private fun MainNavigation(
             TrackMenuAction.GO_TO_ARTIST -> navController.navigate("artist/${track.artistId}")
             TrackMenuAction.GO_TO_ALBUM -> navController.navigate("album/${track.albumId}")
             TrackMenuAction.EDIT_TAGS -> navController.navigate("tagEditor/${track.id}")
+            TrackMenuAction.FETCH_METADATA -> navController.navigate("fetcher/${track.id}")
             TrackMenuAction.DETAILS -> detailsTrack = track
         }
     }
@@ -219,6 +221,12 @@ private fun MainNavigation(
                         arguments = listOf(navArgument("albumId") { type = NavType.LongType }),
                     ) {
                         AlbumTagEditorScreen(onBack = { navController.popBackStack() })
+                    }
+                    composable(
+                        route = "fetcher/{trackId}",
+                        arguments = listOf(navArgument("trackId") { type = NavType.LongType }),
+                    ) {
+                        FetcherScreen(onBack = { navController.popBackStack() })
                     }
                 }
 

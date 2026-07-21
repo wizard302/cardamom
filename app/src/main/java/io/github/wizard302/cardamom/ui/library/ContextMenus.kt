@@ -21,7 +21,8 @@ import io.github.wizard302.cardamom.data.media.Track
 import java.util.Locale
 
 enum class TrackMenuAction {
-    PLAY, PLAY_NEXT, ADD_TO_QUEUE, ADD_TO_PLAYLIST, GO_TO_ARTIST, GO_TO_ALBUM, EDIT_TAGS, DETAILS
+    PLAY, PLAY_NEXT, ADD_TO_QUEUE, ADD_TO_PLAYLIST, GO_TO_ARTIST, GO_TO_ALBUM,
+    EDIT_TAGS, FETCH_METADATA, DETAILS
 }
 
 /**
@@ -58,6 +59,7 @@ fun TrackContextMenu(
             MenuItem(R.string.menu_go_to_album) { onAction(TrackMenuAction.GO_TO_ALBUM); onDismiss() }
         }
         MenuItem(R.string.menu_edit_tags) { onAction(TrackMenuAction.EDIT_TAGS); onDismiss() }
+        MenuItem(R.string.menu_fetch_metadata) { onAction(TrackMenuAction.FETCH_METADATA); onDismiss() }
         MenuItem(R.string.menu_details) { onAction(TrackMenuAction.DETAILS); onDismiss() }
     }
 }

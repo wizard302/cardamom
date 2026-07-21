@@ -37,6 +37,7 @@
     <string name="menu_go_to_artist">Go to artist</string>
     <string name="menu_go_to_album">Go to album</string>
     <string name="menu_edit_tags">Edit tags</string>
+    <string name="menu_fetch_metadata">Get metadata…</string>
     <string name="menu_details">Details</string>
 
     <string name="details_title">Title</string>
@@ -91,4 +92,13 @@
     <string name="tag_cover_remove">Remove cover</string>
     <string name="album_tag_editor_title">Edit album tags</string>
     <string name="album_tag_hint">Only checked fields are written to every track.</string>
+
+    <string name="fetcher_title">Get metadata</string>
+    <string name="fetcher_search">Search</string>
+    <string name="fetcher_error">Search failed. Check your connection.</string>
+    <string name="fetcher_empty">No matches found. Try editing the query.</string>
+    <string name="fetcher_retry">Retry</string>
+    <string name="fetcher_apply_title">Apply metadata</string>
+    <string name="fetcher_apply">Apply</string>
+    <string name="fetcher_cover">Cover art</string>
 </resources>
