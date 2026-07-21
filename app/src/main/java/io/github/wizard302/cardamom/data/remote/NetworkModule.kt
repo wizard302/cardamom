@@ -1,5 +1,6 @@
 package io.github.wizard302.cardamom.data.remote
 
+import io.github.wizard302.cardamom.BuildConfig
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -7,6 +8,7 @@ import dagger.hilt.components.SingletonComponent
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import retrofit2.create
@@ -29,6 +31,15 @@ object NetworkModule {
     fun provideOkHttpClient(): OkHttpClient = OkHttpClient.Builder()
         .addInterceptor(UserAgentInterceptor())
         .addInterceptor(RateLimitInterceptor(host = "musicbrainz.org"))
+        .apply {
+            if (BuildConfig.DEBUG) {
+                addInterceptor(
+                    HttpLoggingInterceptor { message ->
+                        android.util.Log.d("CardamomHttp", message)
+                    }.apply { level = HttpLoggingInterceptor.Level.BASIC },
+                )
+            }
+        }
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(20, TimeUnit.SECONDS)
         .build()

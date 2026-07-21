@@ -98,7 +98,7 @@ class FetcherViewModel @Inject constructor(
                     }
                 }
                 .onFailure { e ->
-                    android.util.Log.w("Cardamom", "Track search failed", e)
+                    android.util.Log.w("Cardamom", "Track search failed: ${e::class.java.name}: ${e.message}", e)
                     _state.update { it.copy(status = SearchStatus.ERROR) }
                 }
         }
