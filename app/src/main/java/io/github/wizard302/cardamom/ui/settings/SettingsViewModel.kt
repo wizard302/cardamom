@@ -19,6 +19,9 @@ class SettingsViewModel @Inject constructor(
     val themeMode: StateFlow<ThemeMode> = repository.themeMode
         .stateIn(viewModelScope, SharingStarted.Eagerly, ThemeMode.SYSTEM)
 
+    val syncedLyricsHighlighting: StateFlow<Boolean> = repository.syncedLyricsHighlighting
+        .stateIn(viewModelScope, SharingStarted.Eagerly, true)
+
     fun cycleThemeMode() {
         val next = when (themeMode.value) {
             ThemeMode.SYSTEM -> ThemeMode.LIGHT
@@ -26,5 +29,13 @@ class SettingsViewModel @Inject constructor(
             ThemeMode.DARK -> ThemeMode.SYSTEM
         }
         viewModelScope.launch { repository.setThemeMode(next) }
+    }
+
+    fun setThemeMode(mode: ThemeMode) {
+        viewModelScope.launch { repository.setThemeMode(mode) }
+    }
+
+    fun setSyncedLyricsHighlighting(enabled: Boolean) {
+        viewModelScope.launch { repository.setSyncedLyricsHighlighting(enabled) }
     }
 }

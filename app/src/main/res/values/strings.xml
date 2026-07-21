@@ -104,4 +104,16 @@
     <string name="album_fetcher_title">Get album metadata</string>
     <string name="album_fetcher_track_titles">Track titles</string>
     <string name="album_fetcher_track_preview">Tracks</string>
+
+    <string name="lyrics_title">Lyrics</string>
+    <string name="lyrics_search">Search lyrics</string>
+    <string name="lyrics_not_found">No lyrics found. Try a manual search.</string>
+
+    <string name="settings_title">Settings</string>
+    <string name="settings_appearance">Appearance</string>
+    <string name="settings_lyrics">Lyrics</string>
+    <string name="settings_synced_lyrics">Synced lyrics highlighting</string>
+    <string name="theme_system">System default</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
 </resources>

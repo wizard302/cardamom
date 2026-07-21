@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.BrightnessAuto
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.LightMode
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -73,6 +74,7 @@ import io.github.wizard302.cardamom.ui.playlist.PlaylistDetailScreen
 import io.github.wizard302.cardamom.ui.playlist.PlaylistsTab
 import io.github.wizard302.cardamom.ui.fetcher.AlbumFetcherScreen
 import io.github.wizard302.cardamom.ui.fetcher.FetcherScreen
+import io.github.wizard302.cardamom.ui.settings.SettingsScreen
 import io.github.wizard302.cardamom.ui.settings.SettingsViewModel
 import io.github.wizard302.cardamom.ui.tageditor.AlbumTagEditorScreen
 import io.github.wizard302.cardamom.ui.tageditor.TagEditorScreen
@@ -179,6 +181,7 @@ private fun MainNavigation(
                             onFavoritesClick = { navController.navigate("favorites") },
                             onEditAlbumTags = { navController.navigate("albumTagEditor/$it") },
                             onFetchAlbumMetadata = { navController.navigate("albumFetcher/$it") },
+                            onSettingsClick = { navController.navigate("settings") },
                             onTrackMenuAction = ::onTrackMenuAction,
                         )
                     }
@@ -236,6 +239,9 @@ private fun MainNavigation(
                         arguments = listOf(navArgument("albumId") { type = NavType.LongType }),
                     ) {
                         AlbumFetcherScreen(onBack = { navController.popBackStack() })
+                    }
+                    composable("settings") {
+                        SettingsScreen(onBack = { navController.popBackStack() })
                     }
                 }
 
@@ -314,6 +320,7 @@ private fun LibraryScreen(
     onFavoritesClick: () -> Unit,
     onEditAlbumTags: (Long) -> Unit,
     onFetchAlbumMetadata: (Long) -> Unit,
+    onSettingsClick: () -> Unit,
     onTrackMenuAction: (TrackMenuAction, Track) -> Unit,
 ) {
     val tracks by libraryViewModel.tracks.collectAsStateWithLifecycle()
@@ -349,6 +356,12 @@ private fun LibraryScreen(
                 }
             }
             ThemeToggleButton()
+            IconButton(onClick = onSettingsClick) {
+                Icon(
+                    imageVector = Icons.Rounded.Settings,
+                    contentDescription = stringResource(R.string.settings_title),
+                )
+            }
         }
 
         HorizontalPager(

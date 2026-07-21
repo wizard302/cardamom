@@ -21,6 +21,7 @@ import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Album
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.Lyrics
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -59,6 +60,7 @@ import androidx.media3.common.Player
 import coil3.compose.AsyncImage
 import io.github.wizard302.cardamom.R
 import io.github.wizard302.cardamom.ui.library.formatDuration
+import io.github.wizard302.cardamom.ui.lyrics.LyricsPanel
 
 /**
  * Collects player state itself so the 500 ms position ticks recompose only this
@@ -193,6 +195,12 @@ fun NowPlayingScreen(
         QueueSheet(viewModel = viewModel, onDismiss = { showQueue = false })
     }
 
+    var showLyrics by remember { mutableStateOf(false) }
+    if (showLyrics) {
+        LyricsPanel(onClose = { showLyrics = false }, modifier = modifier.fillMaxSize())
+        return
+    }
+
     Surface(modifier = modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
@@ -214,6 +222,12 @@ fun NowPlayingScreen(
                     )
                 }
                 Spacer(modifier = Modifier.weight(1f))
+                IconButton(onClick = { showLyrics = true }) {
+                    Icon(
+                        imageVector = Icons.Rounded.Lyrics,
+                        contentDescription = stringResource(R.string.lyrics_title),
+                    )
+                }
                 IconButton(onClick = viewModel::toggleFavorite) {
                     Icon(
                         imageVector = if (isFavorite) {
