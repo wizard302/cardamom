@@ -4,7 +4,6 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Transaction
-import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
 /** A playlist together with its current track count, for list rows. */
@@ -55,8 +54,8 @@ interface PlaylistDao {
     @Query("DELETE FROM playlist_tracks WHERE id = :rowId")
     suspend fun deleteTrack(rowId: Long)
 
-    @Update
-    suspend fun updateTracks(tracks: List<PlaylistTrackEntity>)
+    @Query("UPDATE playlist_tracks SET position = :position WHERE id = :rowId")
+    suspend fun setPosition(rowId: Long, position: Int)
 
     /** Appends [tracks] after the current last position, preserving their order. */
     @Transaction
@@ -65,10 +64,9 @@ interface PlaylistDao {
         insertTracks(tracks.mapIndexed { i, t -> t.copy(playlistId = playlistId, position = start + i) })
     }
 
-    /** Rewrites positions to match the given ordered row ids (after a reorder). */
+    /** Rewrites positions to match the given ordered [rowIds] (after a reorder). */
     @Transaction
-    suspend fun reorder(playlistId: Long) {
-        val current = getTracks(playlistId)
-        updateTracks(current.mapIndexed { i, t -> t.copy(position = i) })
+    suspend fun persistOrder(rowIds: List<Long>) {
+        rowIds.forEachIndexed { i, rowId -> setPosition(rowId, i) }
     }
 }
