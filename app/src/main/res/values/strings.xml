@@ -101,4 +101,7 @@
     <string name="fetcher_apply_title">Apply metadata</string>
     <string name="fetcher_apply">Apply</string>
     <string name="fetcher_cover">Cover art</string>
+    <string name="album_fetcher_title">Get album metadata</string>
+    <string name="album_fetcher_track_titles">Track titles</string>
+    <string name="album_fetcher_track_preview">Tracks</string>
 </resources>

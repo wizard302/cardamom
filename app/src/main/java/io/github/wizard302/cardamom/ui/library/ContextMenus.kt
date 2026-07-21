@@ -75,6 +75,7 @@ fun CollectionContextMenu(
     offset: DpOffset = DpOffset.Zero,
     onGoToArtist: (() -> Unit)? = null,
     onEditTags: (() -> Unit)? = null,
+    onFetchTags: (() -> Unit)? = null,
 ) {
     DropdownMenu(expanded = expanded, onDismissRequest = onDismiss, offset = offset) {
         MenuItem(R.string.menu_play) { onPlay(); onDismiss() }
@@ -85,6 +86,9 @@ fun CollectionContextMenu(
         }
         if (onEditTags != null) {
             MenuItem(R.string.menu_edit_tags) { onEditTags(); onDismiss() }
+        }
+        if (onFetchTags != null) {
+            MenuItem(R.string.menu_fetch_metadata) { onFetchTags(); onDismiss() }
         }
     }
 }

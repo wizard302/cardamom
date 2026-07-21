@@ -139,6 +139,7 @@ fun AlbumsTab(
     onAddToQueue: (Album) -> Unit,
     onGoToArtist: (Album) -> Unit,
     onEditTags: (Long) -> Unit,
+    onFetchTags: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     if (albums.isEmpty()) {
@@ -195,6 +196,7 @@ fun AlbumsTab(
                         offset = with(density) { DpOffset(pressPos.x.toDp(), pressPos.y.toDp()) },
                         onGoToArtist = { onGoToArtist(album) },
                         onEditTags = { onEditTags(album.id) },
+                        onFetchTags = { onFetchTags(album.id) },
                     )
                 }
             }

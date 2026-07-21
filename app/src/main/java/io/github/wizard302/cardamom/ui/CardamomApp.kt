@@ -71,6 +71,7 @@ import io.github.wizard302.cardamom.ui.playlist.AddToPlaylistDialog
 import io.github.wizard302.cardamom.ui.playlist.FavoritesScreen
 import io.github.wizard302.cardamom.ui.playlist.PlaylistDetailScreen
 import io.github.wizard302.cardamom.ui.playlist.PlaylistsTab
+import io.github.wizard302.cardamom.ui.fetcher.AlbumFetcherScreen
 import io.github.wizard302.cardamom.ui.fetcher.FetcherScreen
 import io.github.wizard302.cardamom.ui.settings.SettingsViewModel
 import io.github.wizard302.cardamom.ui.tageditor.AlbumTagEditorScreen
@@ -177,6 +178,7 @@ private fun MainNavigation(
                             onPlaylistClick = { navController.navigate("playlist/$it") },
                             onFavoritesClick = { navController.navigate("favorites") },
                             onEditAlbumTags = { navController.navigate("albumTagEditor/$it") },
+                            onFetchAlbumMetadata = { navController.navigate("albumFetcher/$it") },
                             onTrackMenuAction = ::onTrackMenuAction,
                         )
                     }
@@ -198,6 +200,7 @@ private fun MainNavigation(
                         AlbumScreen(
                             onBack = { navController.popBackStack() },
                             onEditAlbumTags = { navController.navigate("albumTagEditor/$albumId") },
+                            onFetchAlbumMetadata = { navController.navigate("albumFetcher/$albumId") },
                             onTrackMenuAction = ::onTrackMenuAction,
                         )
                     }
@@ -227,6 +230,12 @@ private fun MainNavigation(
                         arguments = listOf(navArgument("trackId") { type = NavType.LongType }),
                     ) {
                         FetcherScreen(onBack = { navController.popBackStack() })
+                    }
+                    composable(
+                        route = "albumFetcher/{albumId}",
+                        arguments = listOf(navArgument("albumId") { type = NavType.LongType }),
+                    ) {
+                        AlbumFetcherScreen(onBack = { navController.popBackStack() })
                     }
                 }
 
@@ -304,6 +313,7 @@ private fun LibraryScreen(
     onPlaylistClick: (Long) -> Unit,
     onFavoritesClick: () -> Unit,
     onEditAlbumTags: (Long) -> Unit,
+    onFetchAlbumMetadata: (Long) -> Unit,
     onTrackMenuAction: (TrackMenuAction, Track) -> Unit,
 ) {
     val tracks by libraryViewModel.tracks.collectAsStateWithLifecycle()
@@ -363,6 +373,7 @@ private fun LibraryScreen(
                     onAddToQueue = { libraryViewModel.addAlbumToQueue(it.id) },
                     onGoToArtist = { album -> onGoToArtist(album.artistId) },
                     onEditTags = onEditAlbumTags,
+                    onFetchTags = onFetchAlbumMetadata,
                 )
                 2 -> TracksTab(
                     tracks = tracks,

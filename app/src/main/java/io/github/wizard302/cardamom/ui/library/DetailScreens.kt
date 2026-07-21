@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.CloudDownload
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.FilledTonalIconButton
@@ -38,6 +39,7 @@ import io.github.wizard302.cardamom.data.media.Track
 fun AlbumScreen(
     onBack: () -> Unit,
     onEditAlbumTags: () -> Unit,
+    onFetchAlbumMetadata: () -> Unit,
     onTrackMenuAction: (TrackMenuAction, Track) -> Unit,
     viewModel: AlbumViewModel = hiltViewModel(),
 ) {
@@ -49,6 +51,12 @@ fun AlbumScreen(
             title = album?.title.orEmpty(),
             onBack = onBack,
             actions = {
+                IconButton(onClick = onFetchAlbumMetadata) {
+                    Icon(
+                        imageVector = Icons.Rounded.CloudDownload,
+                        contentDescription = stringResource(R.string.menu_fetch_metadata),
+                    )
+                }
                 IconButton(onClick = onEditAlbumTags) {
                     Icon(
                         imageVector = Icons.Rounded.Edit,
