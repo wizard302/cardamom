@@ -1,7 +1,10 @@
 package io.github.wizard302.cardamom.data.tags
 
+import android.app.RecoverableSecurityException
 import android.content.Context
+import android.media.MediaScannerConnection
 import android.net.Uri
+import android.os.Build
 import com.kyant.taglib.Picture
 import com.kyant.taglib.TagLib
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -51,10 +54,15 @@ class TagRepository @Inject constructor(
         }.getOrNull()
     }
 
-    /** Writes [tags] (and optional [coverEdit]) into [uri]; returns success. */
+    /**
+     * Writes [tags] (and optional [coverEdit]) into [uri]; returns success.
+     *
+     * On API 29 a [RecoverableSecurityException] is rethrown so the caller can
+     * launch the system's consent dialog and retry; other failures return false.
+     */
     suspend fun write(uri: Uri, tags: TrackTags, coverEdit: CoverEdit): Boolean =
         withContext(Dispatchers.IO) {
-            runCatching {
+            try {
                 context.contentResolver.openFileDescriptor(uri, "rw")?.use { pfd ->
                     val fd = pfd.fd
                     val metadata = TagLib.getMetadata(fd, readPictures = false) ?: return@use false
@@ -86,8 +94,20 @@ class TagRepository @Inject constructor(
                     }
                     propsOk && coverOk
                 } ?: false
-            }.getOrDefault(false)
+            } catch (t: Throwable) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+                    t is RecoverableSecurityException
+                ) {
+                    throw t
+                }
+                false
+            }
         }
+
+    /** Asks MediaStore to re-index the file so edited tags surface app-wide. */
+    fun notifyFileChanged(path: String) {
+        MediaScannerConnection.scanFile(context, arrayOf(path), null, null)
+    }
 
     private fun HashMap<String, Array<String>>.setOrRemove(key: String, value: String) {
         val trimmed = value.trim()

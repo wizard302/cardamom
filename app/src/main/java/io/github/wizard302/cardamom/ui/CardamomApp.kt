@@ -72,6 +72,7 @@ import io.github.wizard302.cardamom.ui.playlist.FavoritesScreen
 import io.github.wizard302.cardamom.ui.playlist.PlaylistDetailScreen
 import io.github.wizard302.cardamom.ui.playlist.PlaylistsTab
 import io.github.wizard302.cardamom.ui.settings.SettingsViewModel
+import io.github.wizard302.cardamom.ui.tageditor.TagEditorScreen
 import kotlinx.coroutines.launch
 
 private val audioPermission: String =
@@ -146,6 +147,7 @@ private fun MainNavigation(
             TrackMenuAction.ADD_TO_PLAYLIST -> addToPlaylistTracks = listOf(track)
             TrackMenuAction.GO_TO_ARTIST -> navController.navigate("artist/${track.artistId}")
             TrackMenuAction.GO_TO_ALBUM -> navController.navigate("album/${track.albumId}")
+            TrackMenuAction.EDIT_TAGS -> navController.navigate("tagEditor/${track.id}")
             TrackMenuAction.DETAILS -> detailsTrack = track
         }
     }
@@ -201,6 +203,12 @@ private fun MainNavigation(
                     }
                     composable("favorites") {
                         FavoritesScreen(onBack = { navController.popBackStack() })
+                    }
+                    composable(
+                        route = "tagEditor/{trackId}",
+                        arguments = listOf(navArgument("trackId") { type = NavType.LongType }),
+                    ) {
+                        TagEditorScreen(onBack = { navController.popBackStack() })
                     }
                 }
 

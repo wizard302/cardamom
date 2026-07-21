@@ -7,6 +7,10 @@
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
+    <!-- Tag writing on API ≤ 29 (batch createWriteRequest is used on 30+). -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="29" />
 
     <!-- Playback -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />

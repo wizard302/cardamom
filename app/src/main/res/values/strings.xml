@@ -36,8 +36,10 @@
     <string name="menu_add_to_playlist">Add to playlist…</string>
     <string name="menu_go_to_artist">Go to artist</string>
     <string name="menu_go_to_album">Go to album</string>
+    <string name="menu_edit_tags">Edit tags</string>
     <string name="menu_details">Details</string>
 
+    <string name="details_title">Title</string>
     <string name="details_artist">Artist</string>
     <string name="details_album">Album</string>
     <string name="details_year">Year</string>
@@ -75,4 +77,16 @@
         <item quantity="one">%d track matched and added.</item>
         <item quantity="other">%d tracks matched and added.</item>
     </plurals>
+
+    <string name="tag_editor_title">Edit tags</string>
+    <string name="action_save">Save</string>
+    <string name="tags_saved">Tags saved</string>
+    <string name="tags_save_failed">Could not save tags</string>
+    <string name="tags_read_failed">Could not read tags from this file</string>
+    <string name="tag_album_artist">Album artist</string>
+    <string name="tag_track_number">Track #</string>
+    <string name="tag_disc_number">Disc #</string>
+    <string name="tag_genre">Genre</string>
+    <string name="tag_cover_replace">Replace cover</string>
+    <string name="tag_cover_remove">Remove cover</string>
 </resources>
