@@ -72,6 +72,7 @@ import io.github.wizard302.cardamom.ui.playlist.FavoritesScreen
 import io.github.wizard302.cardamom.ui.playlist.PlaylistDetailScreen
 import io.github.wizard302.cardamom.ui.playlist.PlaylistsTab
 import io.github.wizard302.cardamom.ui.settings.SettingsViewModel
+import io.github.wizard302.cardamom.ui.tageditor.AlbumTagEditorScreen
 import io.github.wizard302.cardamom.ui.tageditor.TagEditorScreen
 import kotlinx.coroutines.launch
 
@@ -173,6 +174,7 @@ private fun MainNavigation(
                             onGoToArtist = { artistId -> navController.navigate("artist/$artistId") },
                             onPlaylistClick = { navController.navigate("playlist/$it") },
                             onFavoritesClick = { navController.navigate("favorites") },
+                            onEditAlbumTags = { navController.navigate("albumTagEditor/$it") },
                             onTrackMenuAction = ::onTrackMenuAction,
                         )
                     }
@@ -189,9 +191,11 @@ private fun MainNavigation(
                     composable(
                         route = "album/{albumId}",
                         arguments = listOf(navArgument("albumId") { type = NavType.LongType }),
-                    ) {
+                    ) { backStackEntry ->
+                        val albumId = backStackEntry.arguments?.getLong("albumId") ?: 0L
                         AlbumScreen(
                             onBack = { navController.popBackStack() },
+                            onEditAlbumTags = { navController.navigate("albumTagEditor/$albumId") },
                             onTrackMenuAction = ::onTrackMenuAction,
                         )
                     }
@@ -209,6 +213,12 @@ private fun MainNavigation(
                         arguments = listOf(navArgument("trackId") { type = NavType.LongType }),
                     ) {
                         TagEditorScreen(onBack = { navController.popBackStack() })
+                    }
+                    composable(
+                        route = "albumTagEditor/{albumId}",
+                        arguments = listOf(navArgument("albumId") { type = NavType.LongType }),
+                    ) {
+                        AlbumTagEditorScreen(onBack = { navController.popBackStack() })
                     }
                 }
 
@@ -285,6 +295,7 @@ private fun LibraryScreen(
     onGoToArtist: (Long) -> Unit,
     onPlaylistClick: (Long) -> Unit,
     onFavoritesClick: () -> Unit,
+    onEditAlbumTags: (Long) -> Unit,
     onTrackMenuAction: (TrackMenuAction, Track) -> Unit,
 ) {
     val tracks by libraryViewModel.tracks.collectAsStateWithLifecycle()
@@ -343,6 +354,7 @@ private fun LibraryScreen(
                     onPlayNext = { libraryViewModel.playNextAlbum(it.id) },
                     onAddToQueue = { libraryViewModel.addAlbumToQueue(it.id) },
                     onGoToArtist = { album -> onGoToArtist(album.artistId) },
+                    onEditTags = onEditAlbumTags,
                 )
                 2 -> TracksTab(
                     tracks = tracks,

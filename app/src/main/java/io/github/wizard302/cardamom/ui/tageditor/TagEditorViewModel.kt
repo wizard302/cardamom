@@ -1,11 +1,8 @@
 package io.github.wizard302.cardamom.ui.tageditor
 
-import android.app.RecoverableSecurityException
 import android.content.Context
 import android.content.IntentSender
 import android.net.Uri
-import android.os.Build
-import android.provider.MediaStore
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -13,6 +10,7 @@ import io.github.wizard302.cardamom.data.media.LibraryRepository
 import io.github.wizard302.cardamom.data.tags.CoverEdit
 import io.github.wizard302.cardamom.data.tags.TagRepository
 import io.github.wizard302.cardamom.data.tags.TrackTags
+import io.github.wizard302.cardamom.data.tags.writeWithScopedConsent
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CompletableDeferred
@@ -113,9 +111,12 @@ class TagEditorViewModel @Inject constructor(
         val current = _state.value
         viewModelScope.launch {
             _state.update { it.copy(saving = true) }
-            val ok = writeWithConsent(uri) {
-                tagRepository.write(uri, current.tags, current.coverEdit)
-            }
+            val ok = writeWithScopedConsent(
+                context = context,
+                uris = listOf(uri),
+                requestConsent = ::requestConsent,
+                write = { tagRepository.write(uri, current.tags, current.coverEdit) },
+            )
             if (ok) {
                 tagRepository.notifyFileChanged(track.path)
                 invalidateArtworkCache(track.albumArtUri)
@@ -125,27 +126,6 @@ class TagEditorViewModel @Inject constructor(
             _events.emit(if (ok) TagEditorEvent.Saved else TagEditorEvent.Error)
         }
     }
-
-    private suspend fun writeWithConsent(uri: Uri, block: suspend () -> Boolean): Boolean =
-        when {
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.R -> {
-                val request = MediaStore.createWriteRequest(
-                    context.contentResolver,
-                    listOf(uri),
-                )
-                if (requestConsent(request.intentSender)) block() else false
-            }
-            Build.VERSION.SDK_INT == Build.VERSION_CODES.Q -> {
-                try {
-                    block()
-                } catch (e: RecoverableSecurityException) {
-                    val sender = e.userAction.actionIntent.intentSender
-                    if (requestConsent(sender)) block() else false
-                }
-            }
-            // API ≤ 28: WRITE_EXTERNAL_STORAGE runtime permission suffices.
-            else -> block()
-        }
 
     private suspend fun requestConsent(sender: IntentSender): Boolean {
         val deferred = CompletableDeferred<Boolean>()

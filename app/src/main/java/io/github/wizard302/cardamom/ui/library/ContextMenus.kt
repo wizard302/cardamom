@@ -72,6 +72,7 @@ fun CollectionContextMenu(
     onAddToQueue: () -> Unit,
     offset: DpOffset = DpOffset.Zero,
     onGoToArtist: (() -> Unit)? = null,
+    onEditTags: (() -> Unit)? = null,
 ) {
     DropdownMenu(expanded = expanded, onDismissRequest = onDismiss, offset = offset) {
         MenuItem(R.string.menu_play) { onPlay(); onDismiss() }
@@ -79,6 +80,9 @@ fun CollectionContextMenu(
         MenuItem(R.string.menu_add_to_queue) { onAddToQueue(); onDismiss() }
         if (onGoToArtist != null) {
             MenuItem(R.string.menu_go_to_artist) { onGoToArtist(); onDismiss() }
+        }
+        if (onEditTags != null) {
+            MenuItem(R.string.menu_edit_tags) { onEditTags(); onDismiss() }
         }
     }
 }

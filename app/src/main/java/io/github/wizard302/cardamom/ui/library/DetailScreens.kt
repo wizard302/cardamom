@@ -11,8 +11,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
@@ -35,6 +37,7 @@ import io.github.wizard302.cardamom.data.media.Track
 @Composable
 fun AlbumScreen(
     onBack: () -> Unit,
+    onEditAlbumTags: () -> Unit,
     onTrackMenuAction: (TrackMenuAction, Track) -> Unit,
     viewModel: AlbumViewModel = hiltViewModel(),
 ) {
@@ -42,7 +45,18 @@ fun AlbumScreen(
     val tracks by viewModel.tracks.collectAsStateWithLifecycle()
 
     Column(modifier = Modifier.fillMaxSize()) {
-        DetailTopBar(title = album?.title.orEmpty(), onBack = onBack)
+        DetailTopBar(
+            title = album?.title.orEmpty(),
+            onBack = onBack,
+            actions = {
+                IconButton(onClick = onEditAlbumTags) {
+                    Icon(
+                        imageVector = Icons.Rounded.Edit,
+                        contentDescription = stringResource(R.string.menu_edit_tags),
+                    )
+                }
+            },
+        )
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             item(key = "header") {
                 Row(
@@ -193,7 +207,11 @@ private fun SectionHeader(text: String) {
 }
 
 @Composable
-private fun DetailTopBar(title: String, onBack: () -> Unit) {
+private fun DetailTopBar(
+    title: String,
+    onBack: () -> Unit,
+    actions: @Composable RowScope.() -> Unit = {},
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -213,5 +231,6 @@ private fun DetailTopBar(title: String, onBack: () -> Unit) {
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
+        actions()
     }
 }
