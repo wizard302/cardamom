@@ -65,4 +65,9 @@ object NetworkModule {
     @Singleton
     fun provideImageApi(client: OkHttpClient, json: Json): ImageApi =
         retrofit(client, json, "https://coverartarchive.org/").create()
+
+    @Provides
+    @Singleton
+    fun provideLrcLibApi(client: OkHttpClient, json: Json): LrcLibApi =
+        retrofit(client, json, "https://lrclib.net/").create()
 }

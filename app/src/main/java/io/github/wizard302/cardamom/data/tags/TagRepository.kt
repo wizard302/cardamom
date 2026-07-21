@@ -121,6 +121,17 @@ class TagRepository @Inject constructor(
         return pfd.use { block(it.dup().detachFd()) }
     }
 
+    /** Reads embedded lyrics (USLT/LYRICS) from [uri], or null when absent. */
+    suspend fun readLyrics(uri: Uri): String? = withContext(Dispatchers.IO) {
+        runCatching {
+            withTagLibFd(uri, "r") { fd ->
+                val pm = TagLib.getMetadata(fd, readPictures = false)?.propertyMap
+                pm?.get("LYRICS")?.firstOrNull()
+                    ?: pm?.get("UNSYNCEDLYRICS")?.firstOrNull()
+            }
+        }.getOrNull()
+    }
+
     /** Asks MediaStore to re-index the file so edited tags surface app-wide. */
     fun notifyFileChanged(path: String) {
         MediaScannerConnection.scanFile(context, arrayOf(path), null, null)

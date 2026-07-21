@@ -52,3 +52,18 @@ data class FavoriteEntity(
     val durationMs: Long,
     val addedAt: Long,
 )
+
+/**
+ * Cached LRCLIB lookup keyed by (artist, title, duration). [found] is false for
+ * negative results so we don't hammer the API for tracks that have no lyrics.
+ */
+@Entity(tableName = "lyrics_cache", primaryKeys = ["artist", "title", "durationSec"])
+data class LyricsEntity(
+    val artist: String,
+    val title: String,
+    val durationSec: Int,
+    val plainLyrics: String?,
+    val syncedLyrics: String?,
+    val found: Boolean,
+    val fetchedAt: Long,
+)
