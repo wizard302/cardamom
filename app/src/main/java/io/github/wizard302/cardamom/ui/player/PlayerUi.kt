@@ -19,6 +19,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Album
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -184,6 +186,7 @@ fun NowPlayingScreen(
     val shuffleEnabled by viewModel.shuffleEnabled.collectAsStateWithLifecycle()
     val repeatMode by viewModel.repeatMode.collectAsStateWithLifecycle()
     val queuePosition by viewModel.queuePosition.collectAsStateWithLifecycle()
+    val isFavorite by viewModel.isCurrentFavorite.collectAsStateWithLifecycle()
 
     var showQueue by remember { mutableStateOf(false) }
     if (showQueue) {
@@ -211,6 +214,21 @@ fun NowPlayingScreen(
                     )
                 }
                 Spacer(modifier = Modifier.weight(1f))
+                IconButton(onClick = viewModel::toggleFavorite) {
+                    Icon(
+                        imageVector = if (isFavorite) {
+                            Icons.Rounded.Favorite
+                        } else {
+                            Icons.Rounded.FavoriteBorder
+                        },
+                        contentDescription = stringResource(R.string.action_favorite),
+                        tint = if (isFavorite) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                    )
+                }
                 // Queue button doubles as the position indicator ("3 / 108").
                 AssistChip(
                     onClick = { showQueue = true },

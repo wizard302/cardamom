@@ -1,8 +1,12 @@
 package io.github.wizard302.cardamom.playback
 
+import android.os.Bundle
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import io.github.wizard302.cardamom.data.media.Track
+
+/** Metadata extras key carrying the track's file path (for favorites/M3U). */
+const val EXTRA_PATH = "cardamom.path"
 
 internal fun Track.toMediaItem(): MediaItem =
     MediaItem.Builder()
@@ -14,6 +18,7 @@ internal fun Track.toMediaItem(): MediaItem =
                 .setArtist(artist)
                 .setAlbumTitle(album)
                 .setArtworkUri(albumArtUri)
+                .setExtras(Bundle().apply { putString(EXTRA_PATH, path) })
                 .build(),
         )
         .build()

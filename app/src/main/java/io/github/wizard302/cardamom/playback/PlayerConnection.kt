@@ -33,6 +33,9 @@ class PlayerConnection @Inject constructor(
     private val _currentMetadata = MutableStateFlow<MediaMetadata?>(null)
     val currentMetadata: StateFlow<MediaMetadata?> = _currentMetadata.asStateFlow()
 
+    private val _currentItem = MutableStateFlow<MediaItem?>(null)
+    val currentItem: StateFlow<MediaItem?> = _currentItem.asStateFlow()
+
     private val _isPlaying = MutableStateFlow(false)
     val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
 
@@ -115,6 +118,7 @@ class PlayerConnection @Inject constructor(
             _queuePosition.value = (c.currentMediaItemIndex + 1) to c.mediaItemCount
             _queue.value = List(c.mediaItemCount) { i -> c.getMediaItemAt(i) }
             _currentIndex.value = if (c.mediaItemCount > 0) c.currentMediaItemIndex else -1
+            _currentItem.value = c.currentMediaItem
         }
     }
 
