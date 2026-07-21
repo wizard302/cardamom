@@ -61,13 +61,16 @@ import io.github.wizard302.cardamom.ui.library.ArtistScreen
 import io.github.wizard302.cardamom.ui.library.ArtistsTab
 import io.github.wizard302.cardamom.ui.library.FoldersTab
 import io.github.wizard302.cardamom.ui.library.LibraryViewModel
-import io.github.wizard302.cardamom.ui.library.PlaceholderTab
 import io.github.wizard302.cardamom.ui.library.TrackDetailsDialog
 import io.github.wizard302.cardamom.ui.library.TrackMenuAction
 import io.github.wizard302.cardamom.ui.library.TracksTab
 import io.github.wizard302.cardamom.ui.player.MiniPlayer
 import io.github.wizard302.cardamom.ui.player.NowPlayingScreen
 import io.github.wizard302.cardamom.ui.player.PlayerViewModel
+import io.github.wizard302.cardamom.ui.playlist.AddToPlaylistDialog
+import io.github.wizard302.cardamom.ui.playlist.FavoritesScreen
+import io.github.wizard302.cardamom.ui.playlist.PlaylistDetailScreen
+import io.github.wizard302.cardamom.ui.playlist.PlaylistsTab
 import io.github.wizard302.cardamom.ui.settings.SettingsViewModel
 import kotlinx.coroutines.launch
 
@@ -133,12 +136,14 @@ private fun MainNavigation(
     val navController = rememberNavController()
     var showNowPlaying by rememberSaveable { mutableStateOf(false) }
     var detailsTrack by remember { mutableStateOf<Track?>(null) }
+    var addToPlaylistTracks by remember { mutableStateOf<List<Track>?>(null) }
 
     fun onTrackMenuAction(action: TrackMenuAction, track: Track) {
         when (action) {
             TrackMenuAction.PLAY -> libraryViewModel.play(listOf(track), 0)
             TrackMenuAction.PLAY_NEXT -> libraryViewModel.playNext(listOf(track))
             TrackMenuAction.ADD_TO_QUEUE -> libraryViewModel.addToQueue(listOf(track))
+            TrackMenuAction.ADD_TO_PLAYLIST -> addToPlaylistTracks = listOf(track)
             TrackMenuAction.GO_TO_ARTIST -> navController.navigate("artist/${track.artistId}")
             TrackMenuAction.GO_TO_ALBUM -> navController.navigate("album/${track.albumId}")
             TrackMenuAction.DETAILS -> detailsTrack = track
@@ -164,6 +169,8 @@ private fun MainNavigation(
                             onArtistClick = { navController.navigate("artist/${it.id}") },
                             onAlbumClick = { navController.navigate("album/${it.id}") },
                             onGoToArtist = { artistId -> navController.navigate("artist/$artistId") },
+                            onPlaylistClick = { navController.navigate("playlist/$it") },
+                            onFavoritesClick = { navController.navigate("favorites") },
                             onTrackMenuAction = ::onTrackMenuAction,
                         )
                     }
@@ -186,6 +193,15 @@ private fun MainNavigation(
                             onTrackMenuAction = ::onTrackMenuAction,
                         )
                     }
+                    composable(
+                        route = "playlist/{playlistId}",
+                        arguments = listOf(navArgument("playlistId") { type = NavType.LongType }),
+                    ) {
+                        PlaylistDetailScreen(onBack = { navController.popBackStack() })
+                    }
+                    composable("favorites") {
+                        FavoritesScreen(onBack = { navController.popBackStack() })
+                    }
                 }
 
                 MiniPlayer(
@@ -207,6 +223,9 @@ private fun MainNavigation(
 
     detailsTrack?.let { track ->
         TrackDetailsDialog(track = track, onDismiss = { detailsTrack = null })
+    }
+    addToPlaylistTracks?.let { tracks ->
+        AddToPlaylistDialog(tracks = tracks, onDone = { addToPlaylistTracks = null })
     }
 }
 
@@ -256,6 +275,8 @@ private fun LibraryScreen(
     onArtistClick: (Artist) -> Unit,
     onAlbumClick: (Album) -> Unit,
     onGoToArtist: (Long) -> Unit,
+    onPlaylistClick: (Long) -> Unit,
+    onFavoritesClick: () -> Unit,
     onTrackMenuAction: (TrackMenuAction, Track) -> Unit,
 ) {
     val tracks by libraryViewModel.tracks.collectAsStateWithLifecycle()
@@ -321,7 +342,10 @@ private fun LibraryScreen(
                     onTrackClick = { index -> libraryViewModel.play(tracks, index) },
                     onMenuAction = onTrackMenuAction,
                 )
-                3 -> PlaceholderTab(stringResource(R.string.placeholder_phase2))
+                3 -> PlaylistsTab(
+                    onPlaylistClick = onPlaylistClick,
+                    onFavoritesClick = onFavoritesClick,
+                )
                 4 -> FoldersTab(
                     tracks = tracks,
                     emptyText = emptyText,

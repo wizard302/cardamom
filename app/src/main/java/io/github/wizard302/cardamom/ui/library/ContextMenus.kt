@@ -20,7 +20,9 @@ import io.github.wizard302.cardamom.R
 import io.github.wizard302.cardamom.data.media.Track
 import java.util.Locale
 
-enum class TrackMenuAction { PLAY, PLAY_NEXT, ADD_TO_QUEUE, GO_TO_ARTIST, GO_TO_ALBUM, DETAILS }
+enum class TrackMenuAction {
+    PLAY, PLAY_NEXT, ADD_TO_QUEUE, ADD_TO_PLAYLIST, GO_TO_ARTIST, GO_TO_ALBUM, DETAILS
+}
 
 /**
  * Observes the latest pointer-down position on the Initial pass (without
@@ -50,6 +52,7 @@ fun TrackContextMenu(
         MenuItem(R.string.menu_play) { onAction(TrackMenuAction.PLAY); onDismiss() }
         MenuItem(R.string.menu_play_next) { onAction(TrackMenuAction.PLAY_NEXT); onDismiss() }
         MenuItem(R.string.menu_add_to_queue) { onAction(TrackMenuAction.ADD_TO_QUEUE); onDismiss() }
+        MenuItem(R.string.menu_add_to_playlist) { onAction(TrackMenuAction.ADD_TO_PLAYLIST); onDismiss() }
         if (showGoTo) {
             MenuItem(R.string.menu_go_to_artist) { onAction(TrackMenuAction.GO_TO_ARTIST); onDismiss() }
             MenuItem(R.string.menu_go_to_album) { onAction(TrackMenuAction.GO_TO_ALBUM); onDismiss() }

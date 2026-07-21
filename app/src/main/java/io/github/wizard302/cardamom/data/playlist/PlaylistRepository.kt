@@ -68,6 +68,8 @@ class PlaylistRepository @Inject constructor(
         }
     }
 
+    suspend fun removeFavorite(mediaId: Long) = favoriteDao.remove(mediaId)
+
     suspend fun toggleFavorite(
         mediaId: Long,
         path: String,
