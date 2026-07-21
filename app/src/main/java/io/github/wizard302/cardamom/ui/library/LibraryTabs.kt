@@ -28,8 +28,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import io.github.wizard302.cardamom.data.media.Album
@@ -78,10 +81,13 @@ fun TrackRow(
     leading: (@Composable () -> Unit)? = null,
 ) {
     var showMenu by remember { mutableStateOf(false) }
+    var pressPos by remember { mutableStateOf(Offset.Zero) }
+    val density = LocalDensity.current
     Box {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .reportPressPosition { pressPos = it }
                 .combinedClickable(onClick = onClick, onLongClick = { showMenu = true })
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -116,6 +122,7 @@ fun TrackRow(
             expanded = showMenu,
             onDismiss = { showMenu = false },
             onAction = { onMenuAction(it, track) },
+            offset = with(density) { DpOffset(pressPos.x.toDp(), pressPos.y.toDp()) },
             showGoTo = showGoTo,
         )
     }
@@ -147,10 +154,13 @@ fun AlbumsTab(
         LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
             itemsIndexed(albums, key = { _, album -> album.id }) { _, album ->
                 var showMenu by remember { mutableStateOf(false) }
+                var pressPos by remember { mutableStateOf(Offset.Zero) }
+                val density = LocalDensity.current
                 Box {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .reportPressPosition { pressPos = it }
                             .combinedClickable(
                                 onClick = { onAlbumClick(album) },
                                 onLongClick = { showMenu = true },
@@ -181,6 +191,7 @@ fun AlbumsTab(
                         onPlay = { onPlay(album) },
                         onPlayNext = { onPlayNext(album) },
                         onAddToQueue = { onAddToQueue(album) },
+                        offset = with(density) { DpOffset(pressPos.x.toDp(), pressPos.y.toDp()) },
                         onGoToArtist = { onGoToArtist(album) },
                     )
                 }
@@ -214,10 +225,13 @@ fun ArtistsTab(
         LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
             itemsIndexed(artists, key = { _, artist -> artist.id }) { _, artist ->
                 var showMenu by remember { mutableStateOf(false) }
+                var pressPos by remember { mutableStateOf(Offset.Zero) }
+                val density = LocalDensity.current
                 Box {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .reportPressPosition { pressPos = it }
                             .combinedClickable(
                                 onClick = { onArtistClick(artist) },
                                 onLongClick = { showMenu = true },
@@ -256,6 +270,7 @@ fun ArtistsTab(
                         onPlay = { onPlay(artist) },
                         onPlayNext = { onPlayNext(artist) },
                         onAddToQueue = { onAddToQueue(artist) },
+                        offset = with(density) { DpOffset(pressPos.x.toDp(), pressPos.y.toDp()) },
                     )
                 }
             }

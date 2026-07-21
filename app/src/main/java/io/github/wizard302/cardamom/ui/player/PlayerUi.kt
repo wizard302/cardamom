@@ -27,6 +27,7 @@ import androidx.compose.material.icons.rounded.RepeatOne
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledIconButton
@@ -209,22 +210,21 @@ fun NowPlayingScreen(
                         contentDescription = stringResource(R.string.action_back),
                     )
                 }
-                Text(
-                    text = stringResource(R.string.now_playing),
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.weight(1f),
+                Spacer(modifier = Modifier.weight(1f))
+                // Queue button doubles as the position indicator ("3 / 108").
+                AssistChip(
+                    onClick = { showQueue = true },
+                    label = {
+                        Text("${queuePosition.first} / ${queuePosition.second}")
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Rounded.QueueMusic,
+                            contentDescription = stringResource(R.string.queue_open),
+                            modifier = Modifier.size(18.dp),
+                        )
+                    },
                 )
-                Text(
-                    text = "${queuePosition.first}/${queuePosition.second}",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                IconButton(onClick = { showQueue = true }) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Rounded.QueueMusic,
-                        contentDescription = stringResource(R.string.queue_open),
-                    )
-                }
                 // Overflow stub; real actions (tag editor, lyrics) arrive in later phases.
                 var showOverflow by remember { mutableStateOf(false) }
                 Box {

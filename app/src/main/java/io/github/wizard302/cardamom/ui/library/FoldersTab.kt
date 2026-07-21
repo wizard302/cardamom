@@ -33,7 +33,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import io.github.wizard302.cardamom.data.media.Track
 
@@ -123,10 +126,13 @@ private fun FolderRow(
     onMenuAction: (TrackMenuAction, Track) -> Unit,
 ) {
     var showMenu by remember { mutableStateOf(false) }
+    var pressPos by remember { mutableStateOf(Offset.Zero) }
+    val density = LocalDensity.current
     Box {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .reportPressPosition { pressPos = it }
                 .combinedClickable(onClick = onClick, onLongClick = { showMenu = true })
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -162,6 +168,7 @@ private fun FolderRow(
             onPlay = { onPlay(tracksProvider()) },
             onPlayNext = { onPlayNext(tracksProvider()) },
             onAddToQueue = { onAddToQueue(tracksProvider()) },
+            offset = with(density) { DpOffset(pressPos.x.toDp(), pressPos.y.toDp()) },
         )
     }
 }
