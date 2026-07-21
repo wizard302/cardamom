@@ -30,8 +30,8 @@ class TagRepository @Inject constructor(
 
     suspend fun read(uri: Uri): ReadResult? = withContext(Dispatchers.IO) {
         runCatching {
-            context.contentResolver.openFileDescriptor(uri, "r")?.use { pfd ->
-                val metadata = TagLib.getMetadata(pfd.fd, readPictures = true) ?: return@use null
+            withTagLibFd(uri, "r") { fd ->
+                val metadata = TagLib.getMetadata(fd, readPictures = true) ?: return@withTagLibFd null
                 val pm = metadata.propertyMap
                 fun first(key: String) = pm[key]?.firstOrNull().orEmpty()
                 val cover = metadata.pictures
@@ -63,37 +63,42 @@ class TagRepository @Inject constructor(
     suspend fun write(uri: Uri, tags: TrackTags, coverEdit: CoverEdit): Boolean =
         withContext(Dispatchers.IO) {
             try {
-                context.contentResolver.openFileDescriptor(uri, "rw")?.use { pfd ->
-                    val fd = pfd.fd
-                    val metadata = TagLib.getMetadata(fd, readPictures = false) ?: return@use false
-                    val pm = metadata.propertyMap
-                    pm.setOrRemove("TITLE", tags.title)
-                    pm.setOrRemove("ARTIST", tags.artist)
-                    pm.setOrRemove("ALBUM", tags.album)
-                    pm.setOrRemove("ALBUMARTIST", tags.albumArtist)
-                    pm.setOrRemove("TRACKNUMBER", tags.trackNumber)
-                    pm.setOrRemove("DISCNUMBER", tags.discNumber)
-                    pm.setOrRemove("DATE", tags.year)
-                    pm.setOrRemove("GENRE", tags.genre)
-                    val propsOk = TagLib.savePropertyMap(fd, pm)
+                // Read the current property map first so unedited keys survive.
+                val pm = withTagLibFd(uri, "r") { fd ->
+                    TagLib.getMetadata(fd, readPictures = false)?.propertyMap
+                } ?: return@withContext false
 
-                    val coverOk = when (coverEdit) {
-                        CoverEdit.Keep -> true
-                        CoverEdit.Remove -> TagLib.savePictures(fd, emptyArray())
-                        is CoverEdit.Replace -> TagLib.savePictures(
-                            fd,
-                            arrayOf(
-                                Picture(
-                                    data = coverEdit.data,
-                                    description = "",
-                                    pictureType = FRONT_COVER,
-                                    mimeType = coverEdit.mimeType,
+                pm.setOrRemove("TITLE", tags.title)
+                pm.setOrRemove("ARTIST", tags.artist)
+                pm.setOrRemove("ALBUM", tags.album)
+                pm.setOrRemove("ALBUMARTIST", tags.albumArtist)
+                pm.setOrRemove("TRACKNUMBER", tags.trackNumber)
+                pm.setOrRemove("DISCNUMBER", tags.discNumber)
+                pm.setOrRemove("DATE", tags.year)
+                pm.setOrRemove("GENRE", tags.genre)
+
+                val propsOk = withTagLibFd(uri, "rw") { fd -> TagLib.savePropertyMap(fd, pm) } ?: false
+
+                val coverOk = when (coverEdit) {
+                    CoverEdit.Keep -> true
+                    CoverEdit.Remove ->
+                        withTagLibFd(uri, "rw") { fd -> TagLib.savePictures(fd, emptyArray()) } ?: false
+                    is CoverEdit.Replace ->
+                        withTagLibFd(uri, "rw") { fd ->
+                            TagLib.savePictures(
+                                fd,
+                                arrayOf(
+                                    Picture(
+                                        data = coverEdit.data,
+                                        description = "",
+                                        pictureType = FRONT_COVER,
+                                        mimeType = coverEdit.mimeType,
+                                    ),
                                 ),
-                            ),
-                        )
-                    }
-                    propsOk && coverOk
-                } ?: false
+                            )
+                        } ?: false
+                }
+                propsOk && coverOk
             } catch (t: Throwable) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
                     t is RecoverableSecurityException
@@ -103,6 +108,18 @@ class TagRepository @Inject constructor(
                 false
             }
         }
+
+    /**
+     * Opens [uri] and hands TagLib a duplicated, ownership-detached fd. TagLib
+     * `fdopen`s the descriptor and closes it itself, so a plain
+     * [android.os.ParcelFileDescriptor] fd would trip fdsan's double-ownership
+     * check and abort the process. Each native call needs its own fd because
+     * TagLib closes the one it is given.
+     */
+    private inline fun <T> withTagLibFd(uri: Uri, mode: String, block: (fd: Int) -> T): T? {
+        val pfd = context.contentResolver.openFileDescriptor(uri, mode) ?: return null
+        return pfd.use { block(it.dup().detachFd()) }
+    }
 
     /** Asks MediaStore to re-index the file so edited tags surface app-wide. */
     fun notifyFileChanged(path: String) {
