@@ -33,6 +33,11 @@ android {
     buildFeatures {
         compose = true
     }
+    testOptions {
+        // Android stubs (e.g. Uri.parse in model class-initializers) return
+        // defaults instead of throwing, so pure-logic tests can construct models.
+        unitTests.isReturnDefaultValues = true
+    }
 }
 
 dependencies {
@@ -64,4 +69,6 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
+
+    testImplementation(libs.junit)
 }

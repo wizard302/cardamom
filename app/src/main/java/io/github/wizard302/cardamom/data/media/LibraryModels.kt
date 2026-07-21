@@ -29,7 +29,10 @@ data class Track(
         get() = ContentUris.withAppendedId(ALBUM_ART_BASE, albumId)
 
     companion object {
-        private val ALBUM_ART_BASE: Uri = Uri.parse("content://media/external/audio/albumart")
+        // Lazy so the class initializer stays free of Android calls (JVM unit tests).
+        private val ALBUM_ART_BASE: Uri by lazy {
+            Uri.parse("content://media/external/audio/albumart")
+        }
     }
 }
 
