@@ -102,7 +102,10 @@ class AlbumFetcherViewModel @Inject constructor(
                         )
                     }
                 }
-                .onFailure { _state.update { it.copy(status = SearchStatus.ERROR) } }
+                .onFailure { e ->
+                    android.util.Log.w("Cardamom", "Album search failed", e)
+                    _state.update { it.copy(status = SearchStatus.ERROR) }
+                }
         }
     }
 
