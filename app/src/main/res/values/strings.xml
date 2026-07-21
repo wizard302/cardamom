@@ -66,4 +66,13 @@
     <string name="action_delete">Delete</string>
     <string name="action_cancel">Cancel</string>
     <string name="action_favorite">Favorite</string>
+    <string name="playlist_import">Import playlist</string>
+    <string name="playlist_export">Export playlist</string>
+    <string name="playlist_imported">Imported playlist</string>
+    <string name="import_report_title">Import complete</string>
+    <string name="import_unresolved">%d entries could not be matched:</string>
+    <plurals name="import_matched">
+        <item quantity="one">%d track matched and added.</item>
+        <item quantity="other">%d tracks matched and added.</item>
+    </plurals>
 </resources>

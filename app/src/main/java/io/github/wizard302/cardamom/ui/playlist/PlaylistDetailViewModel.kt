@@ -1,10 +1,13 @@
 package io.github.wizard302.cardamom.ui.playlist
 
+import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.wizard302.cardamom.data.db.PlaylistEntity
 import io.github.wizard302.cardamom.data.media.LibraryRepository
+import io.github.wizard302.cardamom.data.playlist.M3uEntry
+import io.github.wizard302.cardamom.data.playlist.M3uIo
 import io.github.wizard302.cardamom.data.playlist.PlaylistRepository
 import io.github.wizard302.cardamom.playback.PlayerConnection
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -22,6 +25,7 @@ class PlaylistDetailViewModel @Inject constructor(
     private val repository: PlaylistRepository,
     libraryRepository: LibraryRepository,
     private val playerConnection: PlayerConnection,
+    private val m3uIo: M3uIo,
 ) : ViewModel() {
 
     private val playlistId: Long = checkNotNull(savedStateHandle["playlistId"])
@@ -45,6 +49,7 @@ class PlaylistDetailViewModel @Inject constructor(
                     artist = e.artist,
                     album = e.album,
                     durationMs = e.durationMs,
+                    path = e.path,
                     albumArtUri = track?.albumArtUri,
                     track = track,
                 )
@@ -75,5 +80,15 @@ class PlaylistDetailViewModel @Inject constructor(
 
     fun delete() {
         viewModelScope.launch { repository.deletePlaylist(playlistId) }
+    }
+
+    /** Exports the playlist as M3U8 to the SAF [uri] the user picked. */
+    fun export(uri: Uri) {
+        viewModelScope.launch {
+            val entries = repository.getPlaylistTracks(playlistId).map {
+                M3uEntry(it.path, it.durationMs / 1000, it.artist, it.title)
+            }
+            m3uIo.export(uri, entries)
+        }
     }
 }

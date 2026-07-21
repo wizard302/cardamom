@@ -1,5 +1,7 @@
 package io.github.wizard302.cardamom.ui.playlist
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -11,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.FileUpload
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
@@ -40,6 +43,10 @@ fun FavoritesScreen(
 ) {
     val rows by viewModel.rows.collectAsStateWithLifecycle()
 
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument(M3U_EXPORT_MIME_TYPE),
+    ) { uri -> if (uri != null) viewModel.export(uri) }
+
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             item(key = "header") {
@@ -61,6 +68,14 @@ fun FavoritesScreen(
                         modifier = Modifier.weight(1f),
                     )
                     if (rows.isNotEmpty()) {
+                        IconButton(
+                            onClick = { exportLauncher.launch("favorites.m3u8") },
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.FileUpload,
+                                contentDescription = stringResource(R.string.playlist_export),
+                            )
+                        }
                         FilledTonalButton(
                             onClick = { viewModel.play(0) },
                             modifier = Modifier.padding(end = 8.dp),

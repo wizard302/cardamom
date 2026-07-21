@@ -1,5 +1,7 @@
 package io.github.wizard302.cardamom.ui.playlist
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -16,11 +18,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.FileDownload
 import androidx.compose.material.icons.rounded.PlaylistPlay
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,6 +35,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -39,6 +44,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.wizard302.cardamom.R
 import io.github.wizard302.cardamom.data.db.PlaylistWithCount
+import io.github.wizard302.cardamom.util.queryDisplayName
 
 @Composable
 fun PlaylistsTab(
@@ -49,13 +55,48 @@ fun PlaylistsTab(
 ) {
     val playlists by viewModel.playlists.collectAsStateWithLifecycle()
     val favoritesCount by viewModel.favoritesCount.collectAsStateWithLifecycle()
+    val importResult by viewModel.importResult.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     var showCreate by remember { mutableStateOf(false) }
     var renameTarget by remember { mutableStateOf<PlaylistWithCount?>(null) }
     var deleteTarget by remember { mutableStateOf<PlaylistWithCount?>(null) }
 
+    val importLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri != null) {
+            val name = context.queryDisplayName(uri)?.substringBeforeLast('.')
+                ?: context.getString(R.string.playlist_imported)
+            viewModel.import(uri, name)
+        }
+    }
+
     Box(modifier = modifier.fillMaxSize()) {
         LazyColumn(modifier = Modifier.fillMaxSize()) {
+            item(key = "header") {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 4.dp, top = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(R.string.tab_playlists),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f),
+                    )
+                    IconButton(
+                        onClick = { importLauncher.launch(M3U_IMPORT_MIME_TYPES) },
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.FileDownload,
+                            contentDescription = stringResource(R.string.playlist_import),
+                        )
+                    }
+                }
+            }
             item(key = "favorites") {
                 FavoritesRow(count = favoritesCount, onClick = onFavoritesClick)
             }
@@ -77,6 +118,10 @@ fun PlaylistsTab(
                 .align(Alignment.BottomEnd)
                 .padding(16.dp),
         )
+    }
+
+    importResult?.let { result ->
+        ImportReportDialog(result = result, onDismiss = viewModel::clearImportResult)
     }
 
     if (showCreate) {
@@ -214,3 +259,12 @@ private fun PlaylistRow(
 @OptIn(ExperimentalFoundationApi::class)
 private fun Modifier.combinedClickableRow(onClick: () -> Unit): Modifier =
     this.combinedClickable(onClick = onClick)
+
+/** M3U files carry inconsistent MIME types; include a wildcard as a fallback. */
+val M3U_IMPORT_MIME_TYPES = arrayOf(
+    "audio/x-mpegurl",
+    "audio/mpegurl",
+    "application/x-mpegurl",
+    "application/vnd.apple.mpegurl",
+    "*/*",
+)

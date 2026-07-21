@@ -1,8 +1,11 @@
 package io.github.wizard302.cardamom.ui.playlist
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.wizard302.cardamom.data.media.LibraryRepository
+import io.github.wizard302.cardamom.data.playlist.M3uEntry
+import io.github.wizard302.cardamom.data.playlist.M3uIo
 import io.github.wizard302.cardamom.data.playlist.PlaylistRepository
 import io.github.wizard302.cardamom.playback.PlayerConnection
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,6 +21,7 @@ class FavoritesViewModel @Inject constructor(
     private val repository: PlaylistRepository,
     libraryRepository: LibraryRepository,
     private val playerConnection: PlayerConnection,
+    private val m3uIo: M3uIo,
 ) : ViewModel() {
 
     val rows: StateFlow<List<ResolvedRow>> =
@@ -33,6 +37,7 @@ class FavoritesViewModel @Inject constructor(
                     artist = f.artist,
                     album = f.album,
                     durationMs = f.durationMs,
+                    path = f.path,
                     albumArtUri = track?.albumArtUri,
                     track = track,
                 )
@@ -50,5 +55,14 @@ class FavoritesViewModel @Inject constructor(
 
     fun remove(mediaId: Long) {
         viewModelScope.launch { repository.removeFavorite(mediaId) }
+    }
+
+    fun export(uri: Uri) {
+        viewModelScope.launch {
+            val entries = rows.value.map {
+                M3uEntry(it.path, it.durationMs / 1000, it.artist, it.title)
+            }
+            m3uIo.export(uri, entries)
+        }
     }
 }

@@ -16,6 +16,8 @@ data class ResolvedRow(
     val artist: String,
     val album: String,
     val durationMs: Long,
+    /** Durable file path, kept even when the file is missing from the library. */
+    val path: String,
     val albumArtUri: Uri?,
     val track: Track?,
 )

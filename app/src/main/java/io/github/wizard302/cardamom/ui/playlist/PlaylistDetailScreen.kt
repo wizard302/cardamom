@@ -1,5 +1,7 @@
 package io.github.wizard302.cardamom.ui.playlist
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
@@ -68,6 +70,10 @@ fun PlaylistDetailScreen(
     var renaming by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf(false) }
 
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument(M3U_EXPORT_MIME_TYPE),
+    ) { uri -> if (uri != null) viewModel.export(uri) }
+
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             item(key = "header") {
@@ -112,6 +118,13 @@ fun PlaylistDetailScreen(
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.action_rename)) },
                                 onClick = { showMenu = false; renaming = true },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.playlist_export)) },
+                                onClick = {
+                                    showMenu = false
+                                    exportLauncher.launch("${playlist?.name.orEmpty()}.m3u8")
+                                },
                             )
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.action_delete)) },
@@ -218,3 +231,5 @@ fun PlaylistDetailScreen(
 
 private fun <T> List<T>.moved(from: Int, to: Int): List<T> =
     toMutableList().apply { add(to, removeAt(from)) }
+
+const val M3U_EXPORT_MIME_TYPE = "audio/x-mpegurl"

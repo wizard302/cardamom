@@ -33,6 +33,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.wizard302.cardamom.R
 import io.github.wizard302.cardamom.data.media.Track
+import io.github.wizard302.cardamom.data.playlist.M3uIo
 
 @Composable
 fun NameDialog(
@@ -62,6 +63,53 @@ fun NameDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        },
+    )
+}
+
+/** Post-import summary: how many tracks matched and which lines were dropped. */
+@Composable
+fun ImportReportDialog(result: M3uIo.ImportResult, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.import_report_title)) },
+        text = {
+            Column {
+                Text(
+                    text = pluralStringResource(
+                        R.plurals.import_matched,
+                        result.matched,
+                        result.matched,
+                    ),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                if (result.unresolved.isNotEmpty()) {
+                    Text(
+                        text = stringResource(
+                            R.string.import_unresolved,
+                            result.unresolved.size,
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
+                    LazyColumn(modifier = Modifier.heightIn(max = 200.dp).padding(top = 4.dp)) {
+                        items(result.unresolved) { line ->
+                            Text(
+                                text = line,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.padding(vertical = 2.dp),
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) }
         },
     )
 }
