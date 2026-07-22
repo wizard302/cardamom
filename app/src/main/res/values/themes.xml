@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.Cardamom" parent="android:Theme.Material.NoActionBar" />
+    <!-- AppCompat parent is required by AppCompatActivity, which in turn backs
+         AppCompatDelegate.setApplicationLocales on API < 33. -->
+    <style name="Theme.Cardamom" parent="Theme.AppCompat.DayNight.NoActionBar" />
 </resources>

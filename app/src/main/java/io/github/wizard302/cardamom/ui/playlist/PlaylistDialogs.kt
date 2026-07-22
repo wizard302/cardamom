@@ -85,8 +85,9 @@ fun ImportReportDialog(result: M3uIo.ImportResult, onDismiss: () -> Unit) {
                 )
                 if (result.unresolved.isNotEmpty()) {
                     Text(
-                        text = stringResource(
-                            R.string.import_unresolved,
+                        text = pluralStringResource(
+                            R.plurals.import_unresolved,
+                            result.unresolved.size,
                             result.unresolved.size,
                         ),
                         style = MaterialTheme.typography.bodyMedium,

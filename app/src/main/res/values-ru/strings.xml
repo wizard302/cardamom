@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tab_artists">Исполнители</string>
+    <string name="tab_albums">Альбомы</string>
+    <string name="tab_tracks">Треки</string>
+    <string name="tab_playlists">Плейлисты</string>
+    <string name="tab_folders">Папки</string>
+
+    <string name="permission_rationale">Cardamom нужен доступ к аудиофайлам, чтобы собрать медиатеку.</string>
+    <string name="permission_grant">Разрешить доступ</string>
+    <string name="library_empty">На устройстве не найдено музыки.</string>
+
+    <string name="now_playing">Сейчас играет</string>
+    <string name="action_play_pause">Пуск/пауза</string>
+    <string name="action_next">Следующий трек</string>
+    <string name="action_previous">Предыдущий трек</string>
+    <string name="action_shuffle">Перемешать</string>
+    <string name="action_repeat">Повтор</string>
+    <string name="action_back">Назад</string>
+    <string name="action_theme">Тема оформления</string>
+    <string name="action_close">Закрыть</string>
+
+    <string name="queue_title">Очередь (%d)</string>
+    <string name="queue_open">Открыть очередь</string>
+    <string name="queue_reorder">Переместить</string>
+    <string name="queue_now_playing">Сейчас играет</string>
+    <string name="action_more">Ещё</string>
+    <string name="menu_tag_editor">Изменить теги</string>
+
+    <string name="menu_play">Воспроизвести</string>
+    <string name="menu_play_next">Играть следующим</string>
+    <string name="menu_add_to_queue">Добавить в очередь</string>
+    <string name="menu_add_to_playlist">Добавить в плейлист…</string>
+    <string name="menu_go_to_artist">Перейти к исполнителю</string>
+    <string name="menu_go_to_album">Перейти к альбому</string>
+    <string name="menu_edit_tags">Изменить теги</string>
+    <string name="menu_fetch_metadata">Найти метаданные…</string>
+    <string name="menu_details">Сведения</string>
+
+    <string name="details_title">Название</string>
+    <string name="details_artist">Исполнитель</string>
+    <string name="details_album">Альбом</string>
+    <string name="details_year">Год</string>
+    <string name="details_duration">Длительность</string>
+    <string name="details_size">Размер</string>
+    <string name="details_bitrate">Битрейт</string>
+    <string name="details_kbps">%d кбит/с</string>
+    <string name="details_path">Путь к файлу</string>
+
+    <plurals name="track_count">
+        <item quantity="one">%d трек</item>
+        <item quantity="few">%d трека</item>
+        <item quantity="many">%d треков</item>
+        <item quantity="other">%d трека</item>
+    </plurals>
+    <string name="unknown_artist">Неизвестный исполнитель</string>
+
+    <string name="favorites_title">Избранное</string>
+    <string name="favorites_empty">Пока нет избранных треков. Нажмите сердечко на экране «Сейчас играет».</string>
+    <string name="playlist_new">Новый плейлист</string>
+    <string name="playlist_rename">Переименовать плейлист</string>
+    <string name="playlist_delete">Удалить плейлист</string>
+    <string name="playlist_delete_confirm">Удалить «%s»? Треки останутся в медиатеке.</string>
+    <string name="playlist_name_label">Название</string>
+    <string name="add_to_playlist_title">Добавить в плейлист</string>
+    <string name="action_create">Создать</string>
+    <string name="action_rename">Переименовать</string>
+    <string name="action_delete">Удалить</string>
+    <string name="action_cancel">Отмена</string>
+    <string name="action_favorite">В избранное</string>
+    <string name="playlist_import">Импорт плейлиста</string>
+    <string name="playlist_export">Экспорт плейлиста</string>
+    <string name="playlist_imported">Импортированный плейлист</string>
+    <string name="import_report_title">Импорт завершён</string>
+    <plurals name="import_unresolved">
+        <item quantity="one">Не удалось сопоставить %d запись:</item>
+        <item quantity="few">Не удалось сопоставить %d записи:</item>
+        <item quantity="many">Не удалось сопоставить %d записей:</item>
+        <item quantity="other">Не удалось сопоставить %d записи:</item>
+    </plurals>
+    <plurals name="import_matched">
+        <item quantity="one">Найден и добавлен %d трек.</item>
+        <item quantity="few">Найдено и добавлено %d трека.</item>
+        <item quantity="many">Найдено и добавлено %d треков.</item>
+        <item quantity="other">Найдено и добавлено %d трека.</item>
+    </plurals>
+
+    <string name="tag_editor_title">Изменить теги</string>
+    <string name="action_save">Сохранить</string>
+    <string name="tags_saved">Теги сохранены</string>
+    <string name="tags_save_failed">Не удалось сохранить теги</string>
+    <string name="tags_read_failed">Не удалось прочитать теги из файла</string>
+    <string name="tag_album_artist">Исполнитель альбома</string>
+    <string name="tag_track_number">№ трека</string>
+    <string name="tag_disc_number">№ диска</string>
+    <string name="tag_genre">Жанр</string>
+    <string name="tag_cover_replace">Заменить обложку</string>
+    <string name="tag_cover_remove">Удалить обложку</string>
+    <string name="album_tag_editor_title">Теги альбома</string>
+    <string name="album_tag_hint">В каждый трек записываются только отмеченные поля.</string>
+
+    <string name="fetcher_title">Поиск метаданных</string>
+    <string name="fetcher_search">Найти</string>
+    <string name="fetcher_error">Поиск не удался. Проверьте подключение.</string>
+    <string name="fetcher_empty">Ничего не найдено. Попробуйте изменить запрос.</string>
+    <string name="fetcher_retry">Повторить</string>
+    <string name="fetcher_apply_title">Применить метаданные</string>
+    <string name="fetcher_apply">Применить</string>
+    <string name="fetcher_cover">Обложка</string>
+    <string name="album_fetcher_title">Метаданные альбома</string>
+    <string name="album_fetcher_track_titles">Названия треков</string>
+    <string name="album_fetcher_track_preview">Треки</string>
+
+    <string name="lyrics_title">Текст песни</string>
+    <string name="lyrics_search">Поиск текста</string>
+    <string name="lyrics_not_found">Текст не найден. Попробуйте поиск вручную.</string>
+
+    <string name="settings_title">Настройки</string>
+    <string name="settings_appearance">Оформление</string>
+    <string name="settings_lyrics">Текст песен</string>
+    <string name="settings_synced_lyrics">Подсветка синхронного текста</string>
+    <string name="theme_system">Как в системе</string>
+    <string name="theme_light">Светлая</string>
+    <string name="theme_dark">Тёмная</string>
+    <string name="settings_language">Язык</string>
+    <string name="language_system">Как в системе</string>
+    <string name="language_en">English</string>
+    <string name="language_ru">Русский</string>
+</resources>

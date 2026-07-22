@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Cardamom</string>
+    <string name="app_name" translatable="false">Cardamom</string>
 
     <string name="tab_artists">Artists</string>
     <string name="tab_albums">Albums</string>
@@ -11,7 +11,6 @@
     <string name="permission_rationale">Cardamom needs access to your audio files to build the music library.</string>
     <string name="permission_grant">Grant access</string>
     <string name="library_empty">No music found on this device.</string>
-    <string name="placeholder_phase2">Playlists arrive in Phase 2.</string>
 
     <string name="now_playing">Now playing</string>
     <string name="action_play_pause">Play/Pause</string>
@@ -73,7 +72,10 @@
     <string name="playlist_export">Export playlist</string>
     <string name="playlist_imported">Imported playlist</string>
     <string name="import_report_title">Import complete</string>
-    <string name="import_unresolved">%d entries could not be matched:</string>
+    <plurals name="import_unresolved">
+        <item quantity="one">%d entry could not be matched:</item>
+        <item quantity="other">%d entries could not be matched:</item>
+    </plurals>
     <plurals name="import_matched">
         <item quantity="one">%d track matched and added.</item>
         <item quantity="other">%d tracks matched and added.</item>
@@ -116,4 +118,8 @@
     <string name="theme_system">System default</string>
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark</string>
+    <string name="settings_language">Language</string>
+    <string name="language_system">System default</string>
+    <string name="language_en">English</string>
+    <string name="language_ru">Русский</string>
 </resources>

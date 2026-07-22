@@ -57,6 +57,8 @@ fun PlaylistsTab(
     val favoritesCount by viewModel.favoritesCount.collectAsStateWithLifecycle()
     val importResult by viewModel.importResult.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    // Read through stringResource so a locale change re-composes the fallback name.
+    val importedFallbackName = stringResource(R.string.playlist_imported)
 
     var showCreate by remember { mutableStateOf(false) }
     var renameTarget by remember { mutableStateOf<PlaylistWithCount?>(null) }
@@ -67,7 +69,7 @@ fun PlaylistsTab(
     ) { uri ->
         if (uri != null) {
             val name = context.queryDisplayName(uri)?.substringBeforeLast('.')
-                ?: context.getString(R.string.playlist_imported)
+                ?: importedFallbackName
             viewModel.import(uri, name)
         }
     }
