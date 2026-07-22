@@ -22,12 +22,13 @@ class MainActivity : AppCompatActivity() {
         setContent {
             val settingsViewModel: SettingsViewModel = hiltViewModel()
             val themeMode by settingsViewModel.themeMode.collectAsStateWithLifecycle()
+            val dynamicColor by settingsViewModel.dynamicColor.collectAsStateWithLifecycle()
             val darkTheme = when (themeMode) {
                 ThemeMode.SYSTEM -> isSystemInDarkTheme()
                 ThemeMode.LIGHT -> false
                 ThemeMode.DARK -> true
             }
-            CardamomTheme(darkTheme = darkTheme) {
+            CardamomTheme(darkTheme = darkTheme, dynamicColor = dynamicColor) {
                 CardamomApp()
             }
         }

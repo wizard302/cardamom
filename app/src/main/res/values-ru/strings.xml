@@ -136,6 +136,13 @@
     <string name="theme_system">Как в системе</string>
     <string name="theme_light">Светлая</string>
     <string name="theme_dark">Тёмная</string>
+    <string name="settings_dynamic_color">Динамические цвета (Material You)</string>
+    <string name="settings_playback">Воспроизведение</string>
+    <string name="settings_pause_on_disconnect">Пауза при отключении наушников</string>
+    <string name="settings_resume_on_connect">Продолжить при подключении наушников</string>
+    <string name="settings_library">Медиатека</string>
+    <string name="settings_rescan">Пересканировать медиатеку</string>
+    <string name="settings_rescan_started">Пересканирование медиатеки…</string>
     <string name="settings_language">Язык</string>
     <string name="language_system">Как в системе</string>
     <string name="language_en">English</string>

@@ -12,6 +12,7 @@ import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import io.github.wizard302.cardamom.MainActivity
 import io.github.wizard302.cardamom.data.media.MediaStoreScanner
+import io.github.wizard302.cardamom.data.settings.SettingsRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -36,7 +37,10 @@ class PlaybackService : MediaSessionService() {
 
     @Inject lateinit var scanner: MediaStoreScanner
 
+    @Inject lateinit var settings: SettingsRepository
+
     private var mediaSession: MediaSession? = null
+    private var headphoneWatcher: HeadphoneWatcher? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     private val persistListener = object : Player.Listener {
@@ -63,9 +67,21 @@ class PlaybackService : MediaSessionService() {
                     .build(),
                 /* handleAudioFocus = */ true,
             )
-            .setHandleAudioBecomingNoisy(true)
+            // Headphone transitions are handled by HeadphoneWatcher instead, so
+            // that both pause-on-disconnect and resume-on-connect stay settable.
+            .setHandleAudioBecomingNoisy(false)
             .build()
         player.addListener(persistListener)
+
+        headphoneWatcher = HeadphoneWatcher(this, player).also { watcher ->
+            watcher.register()
+            scope.launch {
+                settings.pauseOnDisconnect.collect { watcher.pauseOnDisconnect = it }
+            }
+            scope.launch {
+                settings.resumeOnConnect.collect { watcher.resumeOnConnect = it }
+            }
+        }
 
         val sessionActivity = PendingIntent.getActivity(
             this,
@@ -137,6 +153,8 @@ class PlaybackService : MediaSessionService() {
                 }
             }
         }
+        headphoneWatcher?.unregister()
+        headphoneWatcher = null
         scope.cancel()
         mediaSession?.run {
             player.release()

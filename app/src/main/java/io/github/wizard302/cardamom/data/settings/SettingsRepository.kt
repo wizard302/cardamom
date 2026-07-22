@@ -21,6 +21,9 @@ class SettingsRepository @Inject constructor(
 ) {
     private val themeModeKey = stringPreferencesKey("theme_mode")
     private val syncedLyricsKey = booleanPreferencesKey("synced_lyrics_highlighting")
+    private val dynamicColorKey = booleanPreferencesKey("dynamic_color")
+    private val pauseOnDisconnectKey = booleanPreferencesKey("pause_on_disconnect")
+    private val resumeOnConnectKey = booleanPreferencesKey("resume_on_connect")
     private val trackSortKey = stringPreferencesKey("track_sort")
     private val albumSortKey = stringPreferencesKey("album_sort")
     private val artistSortKey = stringPreferencesKey("artist_sort")
@@ -32,6 +35,33 @@ class SettingsRepository @Inject constructor(
     /** "Synced lyrics highlighting" — karaoke mode; on by default. */
     val syncedLyricsHighlighting: Flow<Boolean> = context.settingsDataStore.data.map { prefs ->
         prefs[syncedLyricsKey] ?: true
+    }
+
+    /** Material You colors on API 31+; ignored below that. */
+    val dynamicColor: Flow<Boolean> = context.settingsDataStore.data.map { prefs ->
+        prefs[dynamicColorKey] ?: true
+    }
+
+    /** Pause when headphones are unplugged or Bluetooth audio drops. On by default. */
+    val pauseOnDisconnect: Flow<Boolean> = context.settingsDataStore.data.map { prefs ->
+        prefs[pauseOnDisconnectKey] ?: true
+    }
+
+    /** Resume playback when wired headphones are plugged back in. Off by default. */
+    val resumeOnConnect: Flow<Boolean> = context.settingsDataStore.data.map { prefs ->
+        prefs[resumeOnConnectKey] ?: false
+    }
+
+    suspend fun setDynamicColor(enabled: Boolean) {
+        context.settingsDataStore.edit { it[dynamicColorKey] = enabled }
+    }
+
+    suspend fun setPauseOnDisconnect(enabled: Boolean) {
+        context.settingsDataStore.edit { it[pauseOnDisconnectKey] = enabled }
+    }
+
+    suspend fun setResumeOnConnect(enabled: Boolean) {
+        context.settingsDataStore.edit { it[resumeOnConnectKey] = enabled }
     }
 
     val trackSort: Flow<TrackSort> = context.settingsDataStore.data.map { prefs ->
