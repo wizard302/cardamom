@@ -266,6 +266,16 @@ private fun MainNavigation(
                 NowPlayingScreen(
                     viewModel = playerViewModel,
                     onBack = { showNowPlaying = false },
+                    onTrackAction = { action ->
+                        val id = playerViewModel.currentItem.value?.mediaId?.toLongOrNull()
+                        val track = id?.let(libraryViewModel::trackById)
+                        if (track != null) {
+                            // Dialogs float above this overlay; navigation targets
+                            // would be hidden behind it, so step back first.
+                            if (action.navigatesAway) showNowPlaying = false
+                            onTrackMenuAction(action, track)
+                        }
+                    },
                     modifier = Modifier.fillMaxSize(),
                 )
             }

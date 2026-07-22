@@ -65,6 +65,9 @@ class LibraryViewModel @Inject constructor(
 
     fun onPermissionGranted() = repository.refresh()
 
+    /** Looks a track up in the unfiltered library, e.g. for Now Playing actions. */
+    fun trackById(id: Long): Track? = repository.tracks.value.firstOrNull { it.id == id }
+
     /** Plays [queue] starting from [startIndex] ("play from here" semantics). */
     fun play(queue: List<Track>, startIndex: Int) =
         playerConnection.playQueue(queue, startIndex)

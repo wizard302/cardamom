@@ -39,7 +39,6 @@
     <string name="queue_reorder">Переместить</string>
     <string name="queue_now_playing">Сейчас играет</string>
     <string name="action_more">Ещё</string>
-    <string name="menu_tag_editor">Изменить теги</string>
 
     <string name="menu_play">Воспроизвести</string>
     <string name="menu_play_next">Играть следующим</string>

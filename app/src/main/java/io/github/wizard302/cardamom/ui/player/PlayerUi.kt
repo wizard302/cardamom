@@ -60,8 +60,22 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import coil3.compose.AsyncImage
 import io.github.wizard302.cardamom.R
+import io.github.wizard302.cardamom.ui.library.TrackMenuAction
 import io.github.wizard302.cardamom.ui.library.formatDuration
 import io.github.wizard302.cardamom.ui.lyrics.LyricsPanel
+
+/**
+ * Overflow actions offered on Now Playing. Play / play next / add to queue are
+ * left out: the track is already the one playing.
+ */
+private val NowPlayingActions = listOf(
+    TrackMenuAction.ADD_TO_PLAYLIST to R.string.menu_add_to_playlist,
+    TrackMenuAction.GO_TO_ARTIST to R.string.menu_go_to_artist,
+    TrackMenuAction.GO_TO_ALBUM to R.string.menu_go_to_album,
+    TrackMenuAction.EDIT_TAGS to R.string.menu_edit_tags,
+    TrackMenuAction.FETCH_METADATA to R.string.menu_fetch_metadata,
+    TrackMenuAction.DETAILS to R.string.menu_details,
+)
 
 /**
  * Collects player state itself so the 500 ms position ticks recompose only this
@@ -180,6 +194,7 @@ private fun MiniArtwork(model: Any?) {
 fun NowPlayingScreen(
     viewModel: PlayerViewModel,
     onBack: () -> Unit,
+    onTrackAction: (TrackMenuAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val metadata by viewModel.metadata.collectAsStateWithLifecycle()
@@ -259,7 +274,6 @@ fun NowPlayingScreen(
                         )
                     },
                 )
-                // Overflow stub; real actions (tag editor, lyrics) arrive in later phases.
                 var showOverflow by remember { mutableStateOf(false) }
                 Box {
                     IconButton(onClick = { showOverflow = true }) {
@@ -272,11 +286,15 @@ fun NowPlayingScreen(
                         expanded = showOverflow,
                         onDismissRequest = { showOverflow = false },
                     ) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.menu_tag_editor)) },
-                            enabled = false,
-                            onClick = {},
-                        )
+                        NowPlayingActions.forEach { (action, label) ->
+                            DropdownMenuItem(
+                                text = { Text(stringResource(label)) },
+                                onClick = {
+                                    showOverflow = false
+                                    onTrackAction(action)
+                                },
+                            )
+                        }
                     }
                 }
             }

@@ -33,6 +33,7 @@ class PlayerViewModel @Inject constructor(
     val queuePosition = connection.queuePosition
     val queue = connection.queue
     val currentIndex = connection.currentIndex
+    val currentItem = connection.currentItem
 
     /** Whether the currently playing track is in Favorites. */
     val isCurrentFavorite: StateFlow<Boolean> =

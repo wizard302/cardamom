@@ -22,7 +22,12 @@ import java.util.Locale
 
 enum class TrackMenuAction {
     PLAY, PLAY_NEXT, ADD_TO_QUEUE, ADD_TO_PLAYLIST, GO_TO_ARTIST, GO_TO_ALBUM,
-    EDIT_TAGS, FETCH_METADATA, DETAILS
+    EDIT_TAGS, FETCH_METADATA, DETAILS;
+
+    /** True when handling the action opens another screen rather than a dialog. */
+    val navigatesAway: Boolean
+        get() = this == GO_TO_ARTIST || this == GO_TO_ALBUM ||
+            this == EDIT_TAGS || this == FETCH_METADATA
 }
 
 /**
