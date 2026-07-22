@@ -46,6 +46,7 @@ class LibraryRepository @Inject constructor(
                         year = ts.maxOf { it.year },
                         trackCount = ts.size,
                         artUri = first.albumArtUri,
+                        dateAdded = ts.maxOf { it.dateAdded },
                     )
                 }
                 .sortedBy { it.title.lowercase() }

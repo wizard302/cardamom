@@ -17,9 +17,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.BrightnessAuto
-import androidx.compose.material.icons.rounded.DarkMode
-import androidx.compose.material.icons.rounded.LightMode
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -55,13 +53,18 @@ import io.github.wizard302.cardamom.R
 import io.github.wizard302.cardamom.data.media.Album
 import io.github.wizard302.cardamom.data.media.Artist
 import io.github.wizard302.cardamom.data.media.Track
-import io.github.wizard302.cardamom.data.settings.ThemeMode
+import io.github.wizard302.cardamom.data.settings.AlbumSort
+import io.github.wizard302.cardamom.data.settings.ArtistSort
+import io.github.wizard302.cardamom.data.settings.TrackSort
 import io.github.wizard302.cardamom.ui.library.AlbumScreen
 import io.github.wizard302.cardamom.ui.library.AlbumsTab
 import io.github.wizard302.cardamom.ui.library.ArtistScreen
 import io.github.wizard302.cardamom.ui.library.ArtistsTab
 import io.github.wizard302.cardamom.ui.library.FoldersTab
+import io.github.wizard302.cardamom.ui.library.LibrarySearchField
 import io.github.wizard302.cardamom.ui.library.LibraryViewModel
+import io.github.wizard302.cardamom.ui.library.SortMenuButton
+import io.github.wizard302.cardamom.ui.library.labelRes
 import io.github.wizard302.cardamom.ui.library.TrackDetailsDialog
 import io.github.wizard302.cardamom.ui.library.TrackMenuAction
 import io.github.wizard302.cardamom.ui.library.TracksTab
@@ -75,7 +78,6 @@ import io.github.wizard302.cardamom.ui.playlist.PlaylistsTab
 import io.github.wizard302.cardamom.ui.fetcher.AlbumFetcherScreen
 import io.github.wizard302.cardamom.ui.fetcher.FetcherScreen
 import io.github.wizard302.cardamom.ui.settings.SettingsScreen
-import io.github.wizard302.cardamom.ui.settings.SettingsViewModel
 import io.github.wizard302.cardamom.ui.tageditor.AlbumTagEditorScreen
 import io.github.wizard302.cardamom.ui.tageditor.TagEditorScreen
 import kotlinx.coroutines.launch
@@ -271,21 +273,6 @@ private fun MainNavigation(
 }
 
 @Composable
-private fun ThemeToggleButton(viewModel: SettingsViewModel = hiltViewModel()) {
-    val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
-    IconButton(onClick = viewModel::cycleThemeMode) {
-        Icon(
-            imageVector = when (themeMode) {
-                ThemeMode.SYSTEM -> Icons.Rounded.BrightnessAuto
-                ThemeMode.LIGHT -> Icons.Rounded.LightMode
-                ThemeMode.DARK -> Icons.Rounded.DarkMode
-            },
-            contentDescription = stringResource(R.string.action_theme),
-        )
-    }
-}
-
-@Composable
 private fun PermissionGate(onRequest: () -> Unit) {
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -326,6 +313,11 @@ private fun LibraryScreen(
     val tracks by libraryViewModel.tracks.collectAsStateWithLifecycle()
     val albums by libraryViewModel.albums.collectAsStateWithLifecycle()
     val artists by libraryViewModel.artists.collectAsStateWithLifecycle()
+    val query by libraryViewModel.query.collectAsStateWithLifecycle()
+    val trackSort by libraryViewModel.trackSort.collectAsStateWithLifecycle()
+    val albumSort by libraryViewModel.albumSort.collectAsStateWithLifecycle()
+    val artistSort by libraryViewModel.artistSort.collectAsStateWithLifecycle()
+    var searchActive by rememberSaveable { mutableStateOf(false) }
 
     val tabTitles = listOf(
         stringResource(R.string.tab_artists),
@@ -336,7 +328,11 @@ private fun LibraryScreen(
     )
     val pagerState = rememberPagerState { tabTitles.size }
     val scope = rememberCoroutineScope()
-    val emptyText = stringResource(R.string.library_empty)
+    val emptyText = if (query.isBlank()) {
+        stringResource(R.string.library_empty)
+    } else {
+        stringResource(R.string.search_no_results)
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -355,13 +351,50 @@ private fun LibraryScreen(
                     )
                 }
             }
-            ThemeToggleButton()
+            IconButton(onClick = { searchActive = !searchActive }) {
+                Icon(
+                    imageVector = Icons.Rounded.Search,
+                    contentDescription = stringResource(R.string.action_search),
+                )
+            }
+            when (pagerState.currentPage) {
+                0 -> SortMenuButton(
+                    options = ArtistSort.entries,
+                    selected = artistSort,
+                    labelFor = { stringResource(it.labelRes) },
+                    onSelect = libraryViewModel::setArtistSort,
+                )
+                1 -> SortMenuButton(
+                    options = AlbumSort.entries,
+                    selected = albumSort,
+                    labelFor = { stringResource(it.labelRes) },
+                    onSelect = libraryViewModel::setAlbumSort,
+                )
+                // Folders reuse the track list, so they follow the track sort too.
+                2, 4 -> SortMenuButton(
+                    options = TrackSort.entries,
+                    selected = trackSort,
+                    labelFor = { stringResource(it.labelRes) },
+                    onSelect = libraryViewModel::setTrackSort,
+                )
+            }
             IconButton(onClick = onSettingsClick) {
                 Icon(
                     imageVector = Icons.Rounded.Settings,
                     contentDescription = stringResource(R.string.settings_title),
                 )
             }
+        }
+
+        if (searchActive) {
+            LibrarySearchField(
+                query = query,
+                onQueryChange = libraryViewModel::setQuery,
+                onClose = {
+                    searchActive = false
+                    libraryViewModel.setQuery("")
+                },
+            )
         }
 
         HorizontalPager(

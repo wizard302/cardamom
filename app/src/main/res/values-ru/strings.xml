@@ -10,6 +10,21 @@
     <string name="permission_grant">Разрешить доступ</string>
     <string name="library_empty">На устройстве не найдено музыки.</string>
 
+    <string name="action_search">Поиск</string>
+    <string name="search_hint">Поиск по медиатеке</string>
+    <string name="action_clear">Очистить</string>
+    <string name="search_no_results">По запросу ничего не найдено.</string>
+
+    <string name="action_sort">Сортировка</string>
+    <string name="sort_title">По названию</string>
+    <string name="sort_name">По имени</string>
+    <string name="sort_artist">По исполнителю</string>
+    <string name="sort_album">По альбому</string>
+    <string name="sort_year">По году</string>
+    <string name="sort_date_added">По дате добавления</string>
+    <string name="sort_duration">По длительности</string>
+    <string name="sort_track_count">По числу треков</string>
+
     <string name="now_playing">Сейчас играет</string>
     <string name="action_play_pause">Пуск/пауза</string>
     <string name="action_next">Следующий трек</string>
@@ -17,7 +32,6 @@
     <string name="action_shuffle">Перемешать</string>
     <string name="action_repeat">Повтор</string>
     <string name="action_back">Назад</string>
-    <string name="action_theme">Тема оформления</string>
     <string name="action_close">Закрыть</string>
 
     <string name="queue_title">Очередь (%d)</string>

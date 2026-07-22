@@ -21,6 +21,9 @@ class SettingsRepository @Inject constructor(
 ) {
     private val themeModeKey = stringPreferencesKey("theme_mode")
     private val syncedLyricsKey = booleanPreferencesKey("synced_lyrics_highlighting")
+    private val trackSortKey = stringPreferencesKey("track_sort")
+    private val albumSortKey = stringPreferencesKey("album_sort")
+    private val artistSortKey = stringPreferencesKey("artist_sort")
 
     val themeMode: Flow<ThemeMode> = context.settingsDataStore.data.map { prefs ->
         ThemeMode.entries.firstOrNull { it.name == prefs[themeModeKey] } ?: ThemeMode.SYSTEM
@@ -29,6 +32,30 @@ class SettingsRepository @Inject constructor(
     /** "Synced lyrics highlighting" — karaoke mode; on by default. */
     val syncedLyricsHighlighting: Flow<Boolean> = context.settingsDataStore.data.map { prefs ->
         prefs[syncedLyricsKey] ?: true
+    }
+
+    val trackSort: Flow<TrackSort> = context.settingsDataStore.data.map { prefs ->
+        TrackSort.entries.firstOrNull { it.name == prefs[trackSortKey] } ?: TrackSort.TITLE
+    }
+
+    val albumSort: Flow<AlbumSort> = context.settingsDataStore.data.map { prefs ->
+        AlbumSort.entries.firstOrNull { it.name == prefs[albumSortKey] } ?: AlbumSort.TITLE
+    }
+
+    val artistSort: Flow<ArtistSort> = context.settingsDataStore.data.map { prefs ->
+        ArtistSort.entries.firstOrNull { it.name == prefs[artistSortKey] } ?: ArtistSort.NAME
+    }
+
+    suspend fun setTrackSort(sort: TrackSort) {
+        context.settingsDataStore.edit { it[trackSortKey] = sort.name }
+    }
+
+    suspend fun setAlbumSort(sort: AlbumSort) {
+        context.settingsDataStore.edit { it[albumSortKey] = sort.name }
+    }
+
+    suspend fun setArtistSort(sort: ArtistSort) {
+        context.settingsDataStore.edit { it[artistSortKey] = sort.name }
     }
 
     suspend fun setThemeMode(mode: ThemeMode) {

@@ -44,6 +44,8 @@ data class Album(
     val year: Int,
     val trackCount: Int,
     val artUri: Uri,
+    /** Newest dateAdded among the album's tracks; backs "recently added" sorting. */
+    val dateAdded: Long,
 )
 
 data class Artist(
