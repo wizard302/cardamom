@@ -48,6 +48,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import io.github.wizard302.cardamom.R
@@ -147,6 +148,17 @@ private fun MainNavigation(
     var showNowPlaying by rememberSaveable { mutableStateOf(false) }
     var detailsTrack by remember { mutableStateOf<Track?>(null) }
     var addToPlaylistTracks by remember { mutableStateOf<List<Track>?>(null) }
+
+    // Now Playing is an overlay, not a nav destination, so leaving it for the tag
+    // editor or the fetcher would otherwise drop the user back in the library.
+    var restoreNowPlaying by rememberSaveable { mutableStateOf(false) }
+    val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
+    LaunchedEffect(currentRoute) {
+        if (restoreNowPlaying && currentRoute == "library") {
+            restoreNowPlaying = false
+            showNowPlaying = true
+        }
+    }
 
     fun onTrackMenuAction(action: TrackMenuAction, track: Track) {
         when (action) {
@@ -272,7 +284,10 @@ private fun MainNavigation(
                         if (track != null) {
                             // Dialogs float above this overlay; navigation targets
                             // would be hidden behind it, so step back first.
-                            if (action.navigatesAway) showNowPlaying = false
+                            if (action.navigatesAway) {
+                                showNowPlaying = false
+                                restoreNowPlaying = true
+                            }
                             onTrackMenuAction(action, track)
                         }
                     },
