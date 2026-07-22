@@ -5,6 +5,7 @@ import android.content.Intent
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.common.Timeline
 import androidx.media3.exoplayer.ExoPlayer
@@ -13,6 +14,7 @@ import androidx.media3.session.MediaSessionService
 import io.github.wizard302.cardamom.MainActivity
 import io.github.wizard302.cardamom.data.media.MediaStoreScanner
 import io.github.wizard302.cardamom.data.settings.SettingsRepository
+import io.github.wizard302.cardamom.widget.PlayerWidget
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -46,15 +48,25 @@ class PlaybackService : MediaSessionService() {
     private val persistListener = object : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             if (!isPlaying) saveQueueState()
+            refreshWidget()
         }
 
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
             saveQueueState()
+            refreshWidget()
         }
 
         override fun onTimelineChanged(timeline: Timeline, reason: Int) {
             saveQueueState()
         }
+
+        override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
+            refreshWidget()
+        }
+    }
+
+    private fun refreshWidget() {
+        mediaSession?.player?.let { PlayerWidget.update(this, it) }
     }
 
     override fun onCreate() {

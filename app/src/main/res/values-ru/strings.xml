@@ -145,6 +145,9 @@
     <string name="settings_library">Медиатека</string>
     <string name="settings_rescan">Пересканировать медиатеку</string>
     <string name="settings_rescan_started">Пересканирование медиатеки…</string>
+    <string name="widget_description">Сейчас играет: обложка, название, пуск/пауза и следующий трек.</string>
+    <string name="widget_nothing_playing">Ничего не играет</string>
+
     <string name="settings_about">О приложении</string>
     <string name="about_version">Версия %s</string>
     <string name="about_description">Минималистичный плеер для локальной медиатеки: Material You, редактор тегов, метаданные и тексты песен из интернета, плейлисты M3U.</string>

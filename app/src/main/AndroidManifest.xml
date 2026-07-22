@@ -40,6 +40,17 @@
             </intent-filter>
         </activity>
 
+        <receiver
+            android:name=".widget.PlayerWidget"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/player_widget_info" />
+        </receiver>
+
         <!-- Lets AppCompat persist the picked locale itself on API < 33. -->
         <service
             android:name="androidx.appcompat.app.AppLocalesMetadataHolderService"
