@@ -44,6 +44,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
+    onAbout: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
@@ -137,6 +138,14 @@ fun SettingsScreen(
                         viewModel.rescanLibrary()
                         scope.launch { snackbarHostState.showSnackbar(rescanStarted) }
                     }
+                    .padding(horizontal = 16.dp, vertical = 16.dp),
+            )
+
+            Text(
+                text = stringResource(R.string.settings_about),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onAbout)
                     .padding(horizontal = 16.dp, vertical = 16.dp),
             )
         }

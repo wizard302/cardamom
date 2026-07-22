@@ -77,6 +77,7 @@ import io.github.wizard302.cardamom.ui.playlist.PlaylistDetailScreen
 import io.github.wizard302.cardamom.ui.playlist.PlaylistsTab
 import io.github.wizard302.cardamom.ui.fetcher.AlbumFetcherScreen
 import io.github.wizard302.cardamom.ui.fetcher.FetcherScreen
+import io.github.wizard302.cardamom.ui.settings.AboutScreen
 import io.github.wizard302.cardamom.ui.settings.SettingsScreen
 import io.github.wizard302.cardamom.ui.tageditor.AlbumTagEditorScreen
 import io.github.wizard302.cardamom.ui.tageditor.TagEditorScreen
@@ -243,7 +244,13 @@ private fun MainNavigation(
                         AlbumFetcherScreen(onBack = { navController.popBackStack() })
                     }
                     composable("settings") {
-                        SettingsScreen(onBack = { navController.popBackStack() })
+                        SettingsScreen(
+                            onBack = { navController.popBackStack() },
+                            onAbout = { navController.navigate("about") },
+                        )
+                    }
+                    composable("about") {
+                        AboutScreen(onBack = { navController.popBackStack() })
                     }
                 }
 

@@ -143,6 +143,13 @@
     <string name="settings_library">Медиатека</string>
     <string name="settings_rescan">Пересканировать медиатеку</string>
     <string name="settings_rescan_started">Пересканирование медиатеки…</string>
+    <string name="settings_about">О приложении</string>
+    <string name="about_version">Версия %s</string>
+    <string name="about_description">Минималистичный плеер для локальной медиатеки: Material You, редактор тегов, метаданные и тексты песен из интернета, плейлисты M3U.</string>
+    <string name="about_source">Исходный код</string>
+    <string name="about_licenses">Лицензии открытого ПО</string>
+    <string name="about_taglib">Чтение и запись тегов выполняет TagLib под лицензией GNU LGPL v2.1. TagLib подключён как разделяемая библиотека, поэтому её можно заменить изменённой версией. Исходный код доступен на https://taglib.org.</string>
+    <string name="about_metadata_sources">Метаданные предоставляют MusicBrainz, Cover Art Archive, Deezer и LRCLIB — соблюдайте их условия использования.</string>
     <string name="settings_language">Язык</string>
     <string name="language_system">Как в системе</string>
     <string name="language_en">English</string>
