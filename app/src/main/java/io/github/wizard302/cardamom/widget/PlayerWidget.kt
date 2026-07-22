@@ -54,13 +54,17 @@ class PlayerWidget : AppWidgetProvider() {
         val action = intent.action
         if (action != ACTION_TOGGLE && action != ACTION_NEXT) return
 
-        // Binder calls on one controller stay ordered, so the command is
-        // delivered before the release that follows it.
+        // A receiver's own Context may not bind to services, and building a
+        // MediaController binds to the session — so go through the application
+        // Context. goAsync keeps the process alive until the command lands.
+        val appContext = context.applicationContext
         val pendingResult = goAsync()
-        val token = SessionToken(context, ComponentName(context, PlaybackService::class.java))
-        val future = MediaController.Builder(context, token).buildAsync()
+        val token = SessionToken(appContext, ComponentName(appContext, PlaybackService::class.java))
+        val future = MediaController.Builder(appContext, token).buildAsync()
         future.addListener(
             {
+                // Binder calls on one controller stay ordered, so the command is
+                // delivered before the release that follows it.
                 runCatching {
                     val controller = future.get()
                     when (action) {
@@ -75,7 +79,7 @@ class PlayerWidget : AppWidgetProvider() {
                 }
                 pendingResult.finish()
             },
-            ContextCompat.getMainExecutor(context),
+            ContextCompat.getMainExecutor(appContext),
         )
     }
 
