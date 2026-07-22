@@ -102,6 +102,16 @@ fun PlaylistsTab(
             item(key = "favorites") {
                 FavoritesRow(count = favoritesCount, onClick = onFavoritesClick)
             }
+            if (playlists.isEmpty()) {
+                item(key = "empty") {
+                    Text(
+                        text = stringResource(R.string.playlists_empty),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp),
+                    )
+                }
+            }
             items(playlists, key = { it.id }) { playlist ->
                 PlaylistRow(
                     playlist = playlist,

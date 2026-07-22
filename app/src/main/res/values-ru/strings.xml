@@ -82,6 +82,8 @@
     <string name="action_delete">Удалить</string>
     <string name="action_cancel">Отмена</string>
     <string name="action_favorite">В избранное</string>
+    <string name="playlists_empty">Плейлистов пока нет. Создайте новый или импортируйте файл M3U.</string>
+    <string name="playlist_empty">Плейлист пуст. Добавляйте треки из меню трека.</string>
     <string name="playlist_import">Импорт плейлиста</string>
     <string name="playlist_export">Экспорт плейлиста</string>
     <string name="playlist_imported">Импортированный плейлист</string>

@@ -1,6 +1,7 @@
 package io.github.wizard302.cardamom.data.remote
 
 import kotlinx.serialization.Serializable
+import retrofit2.Response
 import retrofit2.http.GET
 import retrofit2.http.Query
 
@@ -15,7 +16,7 @@ interface LrcLibApi {
         @Query("track_name") track: String,
         @Query("album_name") album: String,
         @Query("duration") duration: Int,
-    ): LrcLibResponse
+    ): Response<LrcLibResponse>
 }
 
 @Serializable

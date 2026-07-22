@@ -33,6 +33,7 @@ data class LyricsUiState(
     val queryTitle: String = "",
     val searching: Boolean = false,
     val notFound: Boolean = false,
+    val error: Boolean = false,
 )
 
 @HiltViewModel
@@ -75,7 +76,7 @@ class LyricsViewModel @Inject constructor(
         val artist = meta.artist?.toString().orEmpty()
         val title = meta.title?.toString().orEmpty()
         _state.update {
-            it.copy(loading = true, queryArtist = artist, queryTitle = title, notFound = false)
+            it.copy(loading = true, queryArtist = artist, queryTitle = title, notFound = false, error = false)
         }
         val uri = item.localConfiguration?.uri
         viewModelScope.launch {
@@ -100,7 +101,7 @@ class LyricsViewModel @Inject constructor(
     /** Manual re-search against LRCLIB with the edited query. */
     fun research() {
         val s = _state.value
-        _state.update { it.copy(searching = true, notFound = false) }
+        _state.update { it.copy(searching = true, notFound = false, error = false) }
         viewModelScope.launch {
             val lyrics = lyricsRepository.refetch(
                 artist = s.queryArtist,
@@ -120,7 +121,8 @@ class LyricsViewModel @Inject constructor(
                 loading = false,
                 plain = lyrics.plain,
                 hasSynced = _lines.value.isNotEmpty(),
-                notFound = lyrics.isEmpty,
+                notFound = lyrics.isEmpty && !lyrics.networkError,
+                error = lyrics.networkError,
             )
         }
     }

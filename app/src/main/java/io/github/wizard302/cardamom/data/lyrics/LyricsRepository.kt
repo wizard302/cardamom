@@ -14,6 +14,8 @@ import javax.inject.Singleton
 data class Lyrics(
     val plain: String?,
     val synced: String?,
+    /** True when LRCLIB could not be reached, as opposed to having no match. */
+    val networkError: Boolean = false,
 ) {
     val isEmpty: Boolean get() = plain.isNullOrBlank() && synced.isNullOrBlank()
 }
@@ -40,11 +42,17 @@ class LyricsRepository @Inject constructor(
 
         val durationSec = (durationMs / 1000).toInt()
         val cached = runCatching { lyricsDao.get(artist, title, durationSec) }.getOrNull()
-        val remote = if (cached == null) fetchAndCache(artist, title, album, durationSec) else cached
+        val fetched = if (cached == null) {
+            fetchAndCache(artist, title, album, durationSec)
+        } else {
+            FetchResult(cached, networkError = false)
+        }
 
         Lyrics(
-            plain = embeddedPlain ?: remote?.plainLyrics?.takeIf { it.isNotBlank() },
-            synced = remote?.syncedLyrics?.takeIf { it.isNotBlank() },
+            plain = embeddedPlain ?: fetched.entity?.plainLyrics?.takeIf { it.isNotBlank() },
+            synced = fetched.entity?.syncedLyrics?.takeIf { it.isNotBlank() },
+            // An embedded copy makes a failed lookup irrelevant.
+            networkError = fetched.networkError && embeddedPlain == null,
         )
     }
 
@@ -55,30 +63,48 @@ class LyricsRepository @Inject constructor(
         album: String,
         durationMs: Long,
     ): Lyrics = withContext(Dispatchers.IO) {
-        val row = fetchAndCache(artist, title, album, (durationMs / 1000).toInt())
-        Lyrics(row?.plainLyrics, row?.syncedLyrics)
+        val result = fetchAndCache(artist, title, album, (durationMs / 1000).toInt())
+        Lyrics(
+            plain = result.entity?.plainLyrics,
+            synced = result.entity?.syncedLyrics,
+            networkError = result.networkError,
+        )
     }
 
+    private class FetchResult(val entity: LyricsEntity?, val networkError: Boolean)
+
+    /**
+     * Only a definite answer from LRCLIB is cached. A transport failure or a
+     * server error must not be stored as "no lyrics", or the miss would stick
+     * around long after the network came back.
+     */
     private suspend fun fetchAndCache(
         artist: String,
         title: String,
         album: String,
         durationSec: Int,
-    ): LyricsEntity? {
+    ): FetchResult {
         val response = runCatching {
             lrcLibApi.get(artist, title, album, durationSec)
-        }.getOrNull()
+        }.getOrElse { return FetchResult(null, networkError = true) }
+
+        if (!response.isSuccessful && response.code() != HTTP_NOT_FOUND) {
+            return FetchResult(null, networkError = true)
+        }
+        val body = response.body().takeIf { response.isSuccessful }
 
         val entity = LyricsEntity(
             artist = artist,
             title = title,
             durationSec = durationSec,
-            plainLyrics = response?.plainLyrics,
-            syncedLyrics = response?.syncedLyrics,
-            found = response != null,
+            plainLyrics = body?.plainLyrics,
+            syncedLyrics = body?.syncedLyrics,
+            found = body != null,
             fetchedAt = System.currentTimeMillis(),
         )
         runCatching { lyricsDao.put(entity) }
-        return entity
+        return FetchResult(entity, networkError = false)
     }
 }
+
+private const val HTTP_NOT_FOUND = 404

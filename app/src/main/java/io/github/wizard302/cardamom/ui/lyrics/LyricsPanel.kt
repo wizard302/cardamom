@@ -115,6 +115,19 @@ fun LyricsPanel(
                         ?: lines.joinToString("\n") { it.text },
                 )
 
+                state.error -> Centered {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = stringResource(R.string.fetcher_error),
+                            color = MaterialTheme.colorScheme.error,
+                            textAlign = TextAlign.Center,
+                        )
+                        TextButton(onClick = viewModel::research) {
+                            Text(stringResource(R.string.fetcher_retry))
+                        }
+                    }
+                }
+
                 else -> Centered {
                     Text(
                         text = stringResource(R.string.lyrics_not_found),

@@ -82,6 +82,8 @@
     <string name="action_delete">Delete</string>
     <string name="action_cancel">Cancel</string>
     <string name="action_favorite">Favorite</string>
+    <string name="playlists_empty">No playlists yet. Create one below or import an M3U file.</string>
+    <string name="playlist_empty">This playlist is empty. Add tracks from any track menu.</string>
     <string name="playlist_import">Import playlist</string>
     <string name="playlist_export">Export playlist</string>
     <string name="playlist_imported">Imported playlist</string>

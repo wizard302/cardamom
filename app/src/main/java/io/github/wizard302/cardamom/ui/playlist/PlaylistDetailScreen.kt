@@ -135,6 +135,17 @@ fun PlaylistDetailScreen(
                 }
             }
 
+            if (rows.isEmpty()) {
+                item(key = "empty") {
+                    Text(
+                        text = stringResource(R.string.playlist_empty),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp),
+                    )
+                }
+            }
+
             itemsIndexed(rows, key = { _, row -> row.key }) { index, row ->
                 val dismissState = rememberSwipeToDismissBoxState(
                     confirmValueChange = { value ->
