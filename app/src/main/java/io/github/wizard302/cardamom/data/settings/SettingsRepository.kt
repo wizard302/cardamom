@@ -3,6 +3,7 @@ package io.github.wizard302.cardamom.data.settings
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -27,6 +28,11 @@ class SettingsRepository @Inject constructor(
     private val trackSortKey = stringPreferencesKey("track_sort")
     private val albumSortKey = stringPreferencesKey("album_sort")
     private val artistSortKey = stringPreferencesKey("artist_sort")
+    private val eqEnabledKey = booleanPreferencesKey("eq_enabled")
+    private val eqPresetKey = intPreferencesKey("eq_preset")
+    private val eqBandsKey = stringPreferencesKey("eq_bands")
+    private val bassBoostKey = intPreferencesKey("eq_bass_boost")
+    private val virtualizerKey = intPreferencesKey("eq_virtualizer")
 
     val themeMode: Flow<ThemeMode> = context.settingsDataStore.data.map { prefs ->
         ThemeMode.entries.firstOrNull { it.name == prefs[themeModeKey] } ?: ThemeMode.SYSTEM
@@ -86,6 +92,38 @@ class SettingsRepository @Inject constructor(
 
     suspend fun setArtistSort(sort: ArtistSort) {
         context.settingsDataStore.edit { it[artistSortKey] = sort.name }
+    }
+
+    /**
+     * Equalizer state. Preset -1 means "custom"; band levels are a comma-separated
+     * list of per-band gains in millibel whose length matches the device's band
+     * count (ignored on restore if the device reports a different count). Bass boost
+     * and virtualizer strengths are 0..1000.
+     */
+    val eqEnabled: Flow<Boolean> = context.settingsDataStore.data.map { it[eqEnabledKey] ?: false }
+    val eqPreset: Flow<Int> = context.settingsDataStore.data.map { it[eqPresetKey] ?: -1 }
+    val eqBands: Flow<String> = context.settingsDataStore.data.map { it[eqBandsKey] ?: "" }
+    val bassBoost: Flow<Int> = context.settingsDataStore.data.map { it[bassBoostKey] ?: 0 }
+    val virtualizer: Flow<Int> = context.settingsDataStore.data.map { it[virtualizerKey] ?: 0 }
+
+    suspend fun setEqEnabled(enabled: Boolean) {
+        context.settingsDataStore.edit { it[eqEnabledKey] = enabled }
+    }
+
+    suspend fun setEqPreset(preset: Int) {
+        context.settingsDataStore.edit { it[eqPresetKey] = preset }
+    }
+
+    suspend fun setEqBands(bands: String) {
+        context.settingsDataStore.edit { it[eqBandsKey] = bands }
+    }
+
+    suspend fun setBassBoost(strength: Int) {
+        context.settingsDataStore.edit { it[bassBoostKey] = strength }
+    }
+
+    suspend fun setVirtualizer(strength: Int) {
+        context.settingsDataStore.edit { it[virtualizerKey] = strength }
     }
 
     suspend fun setThemeMode(mode: ThemeMode) {

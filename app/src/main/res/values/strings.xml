@@ -147,6 +147,17 @@
     <string name="widget_description">Now playing: artwork, title, play/pause and next.</string>
     <string name="widget_nothing_playing">Nothing playing</string>
 
+    <string name="equalizer_title">Equalizer</string>
+    <string name="equalizer_enable">Enable equalizer</string>
+    <string name="equalizer_preset">Preset</string>
+    <string name="equalizer_custom">Custom</string>
+    <string name="equalizer_bass_boost">Bass boost</string>
+    <string name="equalizer_virtualizer">Virtualizer</string>
+    <string name="equalizer_unavailable">The equalizer is not available on this device.</string>
+    <string name="eq_hz">%1$s Hz</string>
+    <string name="eq_khz">%1$s kHz</string>
+    <string name="eq_db">%1$s dB</string>
+
     <string name="settings_about">About</string>
     <string name="about_version">Version %s</string>
     <string name="about_description">A minimalist local-library music player: Material You, tag editing, online metadata and lyrics, M3U playlists.</string>

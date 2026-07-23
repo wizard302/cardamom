@@ -151,6 +151,17 @@
     <string name="widget_description">Сейчас играет: обложка, название, пуск/пауза и следующий трек.</string>
     <string name="widget_nothing_playing">Ничего не играет</string>
 
+    <string name="equalizer_title">Эквалайзер</string>
+    <string name="equalizer_enable">Включить эквалайзер</string>
+    <string name="equalizer_preset">Пресет</string>
+    <string name="equalizer_custom">Вручную</string>
+    <string name="equalizer_bass_boost">Усиление баса</string>
+    <string name="equalizer_virtualizer">Виртуализатор</string>
+    <string name="equalizer_unavailable">Эквалайзер недоступен на этом устройстве.</string>
+    <string name="eq_hz">%1$s Гц</string>
+    <string name="eq_khz">%1$s кГц</string>
+    <string name="eq_db">%1$s дБ</string>
+
     <string name="settings_about">О приложении</string>
     <string name="about_version">Версия %s</string>
     <string name="about_description">Минималистичный плеер для локальной медиатеки: Material You, редактор тегов, метаданные и тексты песен из интернета, плейлисты M3U.</string>

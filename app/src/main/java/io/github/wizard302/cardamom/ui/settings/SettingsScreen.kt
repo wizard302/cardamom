@@ -48,6 +48,7 @@ import kotlinx.coroutines.launch
 fun SettingsScreen(
     onBack: () -> Unit,
     onAbout: () -> Unit,
+    onEqualizer: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
@@ -145,6 +146,13 @@ fun SettingsScreen(
                 label = stringResource(R.string.settings_resume_on_connect),
                 checked = resumeOnConnect,
                 onCheckedChange = viewModel::setResumeOnConnect,
+            )
+            Text(
+                text = stringResource(R.string.equalizer_title),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onEqualizer)
+                    .padding(horizontal = 16.dp, vertical = 16.dp),
             )
 
             SectionTitle(stringResource(R.string.settings_lyrics))

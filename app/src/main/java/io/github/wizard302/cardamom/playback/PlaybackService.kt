@@ -2,12 +2,15 @@ package io.github.wizard302.cardamom.playback
 
 import android.app.PendingIntent
 import android.content.Intent
+import android.media.AudioManager
+import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.common.Timeline
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
@@ -41,6 +44,8 @@ class PlaybackService : MediaSessionService() {
 
     @Inject lateinit var settings: SettingsRepository
 
+    @Inject lateinit var audioEffects: AudioEffectsController
+
     private var mediaSession: MediaSession? = null
     private var headphoneWatcher: HeadphoneWatcher? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -69,6 +74,7 @@ class PlaybackService : MediaSessionService() {
         mediaSession?.player?.let { PlayerWidget.update(this, it) }
     }
 
+    @OptIn(UnstableApi::class)
     override fun onCreate() {
         super.onCreate()
         val player = ExoPlayer.Builder(this)
@@ -84,6 +90,14 @@ class PlaybackService : MediaSessionService() {
             .setHandleAudioBecomingNoisy(false)
             .build()
         player.addListener(persistListener)
+
+        // Pin a stable audio session id up front so the equalizer can attach even
+        // before playback starts, then hand it to the effects controller.
+        val sessionId = (getSystemService(AUDIO_SERVICE) as AudioManager).generateAudioSessionId()
+        if (sessionId != AudioManager.ERROR) {
+            player.setAudioSessionId(sessionId)
+            audioEffects.attach(sessionId)
+        }
 
         headphoneWatcher = HeadphoneWatcher(this, player).also { watcher ->
             watcher.register()
@@ -165,6 +179,7 @@ class PlaybackService : MediaSessionService() {
                 }
             }
         }
+        audioEffects.release()
         headphoneWatcher?.unregister()
         headphoneWatcher = null
         scope.cancel()
