@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
@@ -33,6 +34,7 @@ class SettingsRepository @Inject constructor(
     private val eqBandsKey = stringPreferencesKey("eq_bands")
     private val bassBoostKey = intPreferencesKey("eq_bass_boost")
     private val virtualizerKey = intPreferencesKey("eq_virtualizer")
+    private val excludedFoldersKey = stringSetPreferencesKey("excluded_folders")
 
     val themeMode: Flow<ThemeMode> = context.settingsDataStore.data.map { prefs ->
         ThemeMode.entries.firstOrNull { it.name == prefs[themeModeKey] } ?: ThemeMode.SYSTEM
@@ -124,6 +126,19 @@ class SettingsRepository @Inject constructor(
 
     suspend fun setVirtualizer(strength: Int) {
         context.settingsDataStore.edit { it[virtualizerKey] = strength }
+    }
+
+    /**
+     * Absolute folder paths excluded from library scanning. Empty means "scan
+     * everything" (the default), so newly added folders are included until the
+     * user opts them out. A track is skipped when its file sits under any of these.
+     */
+    val excludedFolders: Flow<Set<String>> = context.settingsDataStore.data.map { prefs ->
+        prefs[excludedFoldersKey] ?: emptySet()
+    }
+
+    suspend fun setExcludedFolders(folders: Set<String>) {
+        context.settingsDataStore.edit { it[excludedFoldersKey] = folders }
     }
 
     suspend fun setThemeMode(mode: ThemeMode) {

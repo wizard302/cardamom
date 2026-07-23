@@ -142,6 +142,8 @@
     <string name="settings_pause_on_disconnect">Пауза при отключении наушников</string>
     <string name="settings_resume_on_connect">Продолжить при подключении наушников</string>
     <string name="settings_library">Медиатека</string>
+    <string name="scanned_folders_title">Папки сканирования</string>
+    <string name="scanned_folders_hint">Папки без флажка не попадают в медиатеку.</string>
     <string name="settings_rescan">Пересканировать медиатеку</string>
     <string name="settings_rescan_started">Пересканирование медиатеки…</string>
     <string name="settings_import_device">Импортировать плейлисты из папки…</string>

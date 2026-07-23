@@ -49,6 +49,7 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onAbout: () -> Unit,
     onEqualizer: () -> Unit,
+    onScannedFolders: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
@@ -163,6 +164,13 @@ fun SettingsScreen(
             )
 
             SectionTitle(stringResource(R.string.settings_library))
+            Text(
+                text = stringResource(R.string.scanned_folders_title),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onScannedFolders)
+                    .padding(horizontal = 16.dp, vertical = 16.dp),
+            )
             Text(
                 text = stringResource(R.string.settings_rescan),
                 modifier = Modifier

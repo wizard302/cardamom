@@ -81,6 +81,7 @@ import io.github.wizard302.cardamom.ui.fetcher.AlbumFetcherScreen
 import io.github.wizard302.cardamom.ui.fetcher.FetcherScreen
 import io.github.wizard302.cardamom.ui.settings.AboutScreen
 import io.github.wizard302.cardamom.ui.settings.EqualizerScreen
+import io.github.wizard302.cardamom.ui.settings.ScannedFoldersScreen
 import io.github.wizard302.cardamom.ui.settings.SettingsScreen
 import io.github.wizard302.cardamom.ui.tageditor.AlbumTagEditorScreen
 import io.github.wizard302.cardamom.ui.tageditor.TagEditorScreen
@@ -271,6 +272,7 @@ private fun MainNavigation(
                             onBack = { navController.popBackStack() },
                             onAbout = { navController.navigate("about") },
                             onEqualizer = { navController.navigate("equalizer") },
+                            onScannedFolders = { navController.navigate("scannedFolders") },
                         )
                     }
                     composable("about") {
@@ -278,6 +280,9 @@ private fun MainNavigation(
                     }
                     composable("equalizer") {
                         EqualizerScreen(onBack = { navController.popBackStack() })
+                    }
+                    composable("scannedFolders") {
+                        ScannedFoldersScreen(onBack = { navController.popBackStack() })
                     }
                 }
 

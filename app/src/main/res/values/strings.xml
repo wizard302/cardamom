@@ -138,6 +138,8 @@
     <string name="settings_pause_on_disconnect">Pause when headphones disconnect</string>
     <string name="settings_resume_on_connect">Resume when headphones reconnect</string>
     <string name="settings_library">Library</string>
+    <string name="scanned_folders_title">Scanned folders</string>
+    <string name="scanned_folders_hint">Unchecked folders are skipped when building the library.</string>
     <string name="settings_rescan">Rescan library</string>
     <string name="settings_rescan_started">Rescanning library…</string>
     <string name="settings_import_device">Import playlists from folder…</string>

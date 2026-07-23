@@ -6,6 +6,7 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
 import dagger.hilt.android.qualifiers.ApplicationContext
+import io.github.wizard302.cardamom.data.settings.SettingsRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -15,6 +16,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -27,13 +29,22 @@ import javax.inject.Singleton
 class LibraryRepository @Inject constructor(
     @ApplicationContext context: Context,
     private val scanner: MediaStoreScanner,
+    settings: SettingsRepository,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    private val _tracks = MutableStateFlow<List<Track>>(emptyList())
-    val tracks: StateFlow<List<Track>> = _tracks.asStateFlow()
+    // Everything MediaStore returned, before folder exclusions. The folder picker
+    // needs this so the user can still see (and re-include) excluded folders.
+    private val _allTracks = MutableStateFlow<List<Track>>(emptyList())
+    val allTracks: StateFlow<List<Track>> = _allTracks.asStateFlow()
 
-    val albums: StateFlow<List<Album>> = _tracks
+    /** Library tracks with the user's excluded folders removed. */
+    val tracks: StateFlow<List<Track>> =
+        combine(_allTracks, settings.excludedFolders) { list, excluded ->
+            if (excluded.isEmpty()) list else list.filterNot { it.isUnder(excluded) }
+        }.stateIn(scope, SharingStarted.Eagerly, emptyList())
+
+    val albums: StateFlow<List<Album>> = tracks
         .map { list ->
             list.groupBy { it.albumId }
                 .map { (albumId, ts) ->
@@ -53,7 +64,7 @@ class LibraryRepository @Inject constructor(
         }
         .stateIn(scope, SharingStarted.Eagerly, emptyList())
 
-    val artists: StateFlow<List<Artist>> = _tracks
+    val artists: StateFlow<List<Artist>> = tracks
         .map { list ->
             list.groupBy { it.artistId }
                 .map { (artistId, ts) ->
@@ -93,6 +104,10 @@ class LibraryRepository @Inject constructor(
     }
 
     private suspend fun doScan() {
-        _tracks.value = scanner.scanTracks()
+        _allTracks.value = scanner.scanTracks()
     }
 }
+
+/** True when this track's file sits inside any of the [excludedFolders]. */
+private fun Track.isUnder(excludedFolders: Set<String>): Boolean =
+    excludedFolders.any { path == it || path.startsWith("$it/") }
