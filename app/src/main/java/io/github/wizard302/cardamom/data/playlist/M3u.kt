@@ -30,12 +30,19 @@ object M3uWriter {
         sb.append("#EXTM3U\n")
         val normalizedBase = baseDir?.trimEnd('/')
         for (entry in entries) {
+            // Tags may legally contain newlines; flattened so they cannot break
+            // the file structure or inject extra entries.
             sb.append("#EXTINF:").append(entry.durationSec).append(',')
-                .append(entry.artist).append(" - ").append(entry.title).append('\n')
+                .append(entry.artist.oneLine()).append(" - ").append(entry.title.oneLine())
+                .append('\n')
             sb.append(relativize(entry.path, normalizedBase)).append('\n')
         }
         return sb.toString()
     }
+
+    private fun String.oneLine(): String = replace(NEWLINES, " ").trim()
+
+    private val NEWLINES = Regex("[\\r\\n]+")
 
     private fun relativize(path: String, baseDir: String?): String =
         if (baseDir != null && path.startsWith("$baseDir/")) {
@@ -131,11 +138,13 @@ object M3uMatcher {
         val fileName = entryPath.substringAfterLast('/')
         val candidates = byName[fileName] ?: return null
         if (candidates.size == 1) return candidates.first()
-        // Disambiguate by also matching the parent directory segment.
+        // Disambiguate by also matching the parent directory segment. When that
+        // fails too, report the entry as unresolved instead of silently picking
+        // an arbitrary candidate.
         val parent = entryPath.removeSuffix("/$fileName").substringAfterLast('/')
         return candidates.firstOrNull {
             it.path.removeSuffix("/$fileName").substringAfterLast('/') == parent
-        } ?: candidates.first()
+        }
     }
 
     private fun metadataMatch(entry: ParsedM3uEntry, library: List<Track>): Track? {

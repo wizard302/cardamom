@@ -5,6 +5,7 @@ import android.net.Uri
 import android.provider.DocumentsContract
 import io.github.wizard302.cardamom.data.media.LibraryRepository
 import io.github.wizard302.cardamom.data.media.Track
+import io.github.wizard302.cardamom.util.documentUriToFilePath
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -28,7 +29,11 @@ class M3uIo @Inject constructor(
     data class FolderImportResult(val playlists: Int, val tracks: Int)
 
     suspend fun export(uri: Uri, entries: List<M3uEntry>) = withContext(Dispatchers.IO) {
-        val text = M3uWriter.write(entries)
+        // Relative paths whenever the playlist's real location is resolvable —
+        // that keeps exported playlists portable across devices.
+        val baseDir = documentUriToFilePath(uri)?.substringBeforeLast('/', missingDelimiterValue = "")
+            ?.takeIf { it.isNotEmpty() }
+        val text = M3uWriter.write(entries, baseDir)
         context.contentResolver.openOutputStream(uri, "wt")?.use { output ->
             output.write(text.toByteArray(Charsets.UTF_8))
         }
@@ -42,7 +47,10 @@ class M3uIo @Inject constructor(
             ?: return@withContext null
 
         val parsed = M3uParser.parse(text)
-        val matches = M3uMatcher.match(parsed, libraryRepository.tracks.value)
+        val playlistDir = documentUriToFilePath(uri)
+            ?.substringBeforeLast('/', missingDelimiterValue = "")
+            ?.takeIf { it.isNotEmpty() }
+        val matches = M3uMatcher.match(parsed, libraryRepository.tracks.value, playlistDir)
         val resolved = matches.mapNotNull { it.track }
         val playlistId = playlistRepository.createPlaylistWith(playlistName, resolved)
         ImportResult(
@@ -99,6 +107,7 @@ class M3uIo @Inject constructor(
                     if (playlistName in existingNames) continue
                     val docUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
                     val resolved = resolvePlaylistFile(docUri, library)
+
                     if (resolved.isEmpty()) continue
                     playlistRepository.createPlaylistWith(playlistName, resolved)
                     existingNames.add(playlistName)
@@ -116,6 +125,10 @@ class M3uIo @Inject constructor(
             ?.bufferedReader(Charsets.UTF_8)
             ?.use { it.readText() }
             ?: return emptyList()
-        return M3uMatcher.match(M3uParser.parse(text), library).mapNotNull { it.track }
+        val playlistDir = documentUriToFilePath(uri)
+            ?.substringBeforeLast('/', missingDelimiterValue = "")
+            ?.takeIf { it.isNotEmpty() }
+        return M3uMatcher.match(M3uParser.parse(text), library, playlistDir)
+            .mapNotNull { it.track }
     }
 }
