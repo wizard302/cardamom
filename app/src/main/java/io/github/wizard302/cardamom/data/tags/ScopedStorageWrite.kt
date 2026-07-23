@@ -31,12 +31,25 @@ suspend fun writeWithScopedConsent(
     }
 
     Build.VERSION.SDK_INT == Build.VERSION_CODES.Q -> {
-        try {
-            write()
-        } catch (e: RecoverableSecurityException) {
-            val sender = e.userAction.actionIntent.intentSender
-            if (requestConsent(sender)) write() else false
+        // On Q consent is granted per URI, so a multi-file batch can throw once
+        // per file. Keep retrying until the batch completes, the user declines,
+        // or every URI has had its chance (guards against a pathological loop).
+        var result: Boolean? = null
+        var consentsLeft = uris.size
+        while (result == null) {
+            result = try {
+                write()
+            } catch (e: RecoverableSecurityException) {
+                consentsLeft--
+                val sender = e.userAction.actionIntent.intentSender
+                when {
+                    consentsLeft < 0 -> false
+                    requestConsent(sender) -> null // consent granted — retry
+                    else -> false
+                }
+            }
         }
+        result
     }
 
     else -> write()
