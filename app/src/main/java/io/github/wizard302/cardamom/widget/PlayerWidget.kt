@@ -20,6 +20,7 @@ import io.github.wizard302.cardamom.playback.PlaybackService
 
 private const val ACTION_TOGGLE = "io.github.wizard302.cardamom.widget.TOGGLE"
 private const val ACTION_NEXT = "io.github.wizard302.cardamom.widget.NEXT"
+private const val ACTION_PREVIOUS = "io.github.wizard302.cardamom.widget.PREVIOUS"
 private const val ARTWORK_TARGET_PX = 256
 
 /** Last known playback state, so the widget can be redrawn without a player. */
@@ -52,7 +53,7 @@ class PlayerWidget : AppWidgetProvider() {
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
         val action = intent.action
-        if (action != ACTION_TOGGLE && action != ACTION_NEXT) return
+        if (action != ACTION_TOGGLE && action != ACTION_NEXT && action != ACTION_PREVIOUS) return
 
         // A receiver's own Context may not bind to services, and building a
         // MediaController binds to the session — so go through the application
@@ -74,6 +75,7 @@ class PlayerWidget : AppWidgetProvider() {
                             controller.play()
                         }
                         ACTION_NEXT -> controller.seekToNextMediaItem()
+                        ACTION_PREVIOUS -> controller.seekToPrevious()
                     }
                     controller.release()
                 }
@@ -127,6 +129,7 @@ class PlayerWidget : AppWidgetProvider() {
                     setImageViewResource(R.id.widget_artwork, R.mipmap.ic_launcher)
                 }
 
+                setOnClickPendingIntent(R.id.widget_previous, command(context, ACTION_PREVIOUS))
                 setOnClickPendingIntent(R.id.widget_play_pause, command(context, ACTION_TOGGLE))
                 setOnClickPendingIntent(R.id.widget_next, command(context, ACTION_NEXT))
                 setOnClickPendingIntent(R.id.widget_root, openApp(context))

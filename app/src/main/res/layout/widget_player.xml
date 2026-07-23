@@ -45,6 +45,15 @@
     </LinearLayout>
 
     <ImageButton
+        android:id="@+id/widget_previous"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/action_previous"
+        android:scaleType="centerInside"
+        android:src="@drawable/ic_widget_previous" />
+
+    <ImageButton
         android:id="@+id/widget_play_pause"
         android:layout_width="48dp"
         android:layout_height="48dp"
