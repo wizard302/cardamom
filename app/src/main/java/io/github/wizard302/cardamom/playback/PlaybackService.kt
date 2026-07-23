@@ -20,6 +20,9 @@ import io.github.wizard302.cardamom.data.settings.SettingsRepository
 import io.github.wizard302.cardamom.widget.PlayerWidget
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -35,6 +38,7 @@ import javax.inject.Inject
  * The queue and position are persisted to DataStore (QueueStateStore) on pause,
  * track change and queue edits, and restored on cold service start.
  */
+@OptIn(FlowPreview::class)
 @AndroidEntryPoint
 class PlaybackService : MediaSessionService() {
 
@@ -49,6 +53,10 @@ class PlaybackService : MediaSessionService() {
     private var mediaSession: MediaSession? = null
     private var headphoneWatcher: HeadphoneWatcher? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+    // Queue edits (especially a bulk "play all") fire many timeline callbacks in
+    // a burst; persisting is debounced so DataStore sees one write per burst.
+    private val saveRequests = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
     private val persistListener = object : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -121,16 +129,24 @@ class PlaybackService : MediaSessionService() {
             .build()
 
         scope.launch { restoreQueueState(player) }
+        scope.launch {
+            saveRequests.debounce(1_000).collect { persistQueueState() }
+        }
     }
 
     private fun saveQueueState() {
+        saveRequests.tryEmit(Unit)
+    }
+
+    /** Reads the player on Main (collector context) and persists to DataStore. */
+    private suspend fun persistQueueState() {
         val player = mediaSession?.player ?: return
         val ids = List(player.mediaItemCount) { i ->
             player.getMediaItemAt(i).mediaId.toLongOrNull()
         }.filterNotNull()
         val index = player.currentMediaItemIndex
         val position = player.currentPosition.coerceAtLeast(0L)
-        scope.launch { queueStateStore.save(ids, index, position) }
+        queueStateStore.save(ids, index, position)
     }
 
     private suspend fun restoreQueueState(player: Player) {
