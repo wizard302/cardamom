@@ -1,13 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?><!--
-   Sample backup rules file; uncomment and customize as necessary.
-   See https://developer.android.com/guide/topics/data/autobackup
-   for details.
-   Note: This file is ignored for devices older than API 31
-   See https://developer.android.com/about/versions/12/backup-restore
+    Everything is intentionally included in auto-backup (API < 31 path):
+    playlists, favorites, settings and the lyrics cache — nothing sensitive
+    is stored by the app.
 -->
-<full-backup-content>
-    <!--
-   <include domain="sharedpref" path="."/>
-   <exclude domain="sharedpref" path="device.xml"/>
--->
-</full-backup-content>
+<full-backup-content />

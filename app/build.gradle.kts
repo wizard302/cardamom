@@ -35,6 +35,11 @@ android {
         compose = true
         buildConfig = true
     }
+    ksp {
+        // Exported Room schemas (see CardamomDatabase exportSchema) live in
+        // app/schemas and are committed, so migrations stay testable.
+        arg("room.schemaLocation", "$projectDir/schemas")
+    }
     testOptions {
         // Android stubs (e.g. Uri.parse in model class-initializers) return
         // defaults instead of throwing, so pure-logic tests can construct models.

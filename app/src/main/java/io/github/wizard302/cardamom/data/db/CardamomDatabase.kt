@@ -13,7 +13,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         LyricsEntity::class,
     ],
     version = 2,
-    exportSchema = false,
+    exportSchema = true,
 )
 abstract class CardamomDatabase : RoomDatabase() {
     abstract fun playlistDao(): PlaylistDao
