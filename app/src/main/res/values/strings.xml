@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name" translatable="false">Cardamom</string>
+    <!-- Launcher / app-info label shown by Android; the UI uses app_name. -->
+    <string name="app_launcher_name" translatable="false">Cardamom Music</string>
 
     <string name="tab_artists">Artists</string>
     <string name="tab_albums">Albums</string>
