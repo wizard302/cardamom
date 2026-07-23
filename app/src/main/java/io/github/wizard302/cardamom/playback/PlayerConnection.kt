@@ -63,7 +63,7 @@ class PlayerConnection @Inject constructor(
     private val listener = object : Player.Listener {
         override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
             _currentMetadata.value = mediaMetadata
-            updateQueuePosition()
+            updatePosition()
         }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -83,11 +83,17 @@ class PlayerConnection @Inject constructor(
         }
 
         override fun onTimelineChanged(timeline: androidx.media3.common.Timeline, reason: Int) {
-            updateQueuePosition()
+            // The queue list is rebuilt only here: transitions inside an
+            // unchanged timeline just move the index.
+            updateQueue()
+            updatePosition()
         }
 
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-            updateQueuePosition()
+            // Gapless transitions keep the playback state READY, so
+            // onPlaybackStateChanged never fires — refresh the duration here.
+            controller?.let { _durationMs.value = it.duration.coerceAtLeast(0L) }
+            updatePosition()
         }
     }
 
@@ -106,17 +112,23 @@ class PlayerConnection @Inject constructor(
                 _durationMs.value = c.duration.coerceAtLeast(0L)
                 _shuffleEnabled.value = c.shuffleModeEnabled
                 _repeatMode.value = c.repeatMode
-                updateQueuePosition()
+                updateQueue()
+                updatePosition()
                 _connected.value = true
             },
             ContextCompat.getMainExecutor(context),
         )
     }
 
-    private fun updateQueuePosition() {
+    private fun updateQueue() {
+        controller?.let { c ->
+            _queue.value = List(c.mediaItemCount) { i -> c.getMediaItemAt(i) }
+        }
+    }
+
+    private fun updatePosition() {
         controller?.let { c ->
             _queuePosition.value = (c.currentMediaItemIndex + 1) to c.mediaItemCount
-            _queue.value = List(c.mediaItemCount) { i -> c.getMediaItemAt(i) }
             _currentIndex.value = if (c.mediaItemCount > 0) c.currentMediaItemIndex else -1
             _currentItem.value = c.currentMediaItem
         }
