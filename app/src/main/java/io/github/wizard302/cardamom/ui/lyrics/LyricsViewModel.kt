@@ -8,7 +8,7 @@ import io.github.wizard302.cardamom.data.lyrics.LrcLine
 import io.github.wizard302.cardamom.data.lyrics.LrcParser
 import io.github.wizard302.cardamom.data.lyrics.LyricsRepository
 import io.github.wizard302.cardamom.data.settings.SettingsRepository
-import io.github.wizard302.cardamom.playback.EXTRA_PATH
+import io.github.wizard302.cardamom.playback.EXTRA_DURATION_MS
 import io.github.wizard302.cardamom.playback.PlayerConnection
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
@@ -92,7 +92,7 @@ class LyricsViewModel @Inject constructor(
                     artist = artist,
                     title = title,
                     album = meta.albumTitle?.toString().orEmpty(),
-                    durationMs = connection.durationMs.value.coerceAtLeast(0),
+                    durationMs = trackDurationMs(),
                 )
             } else {
                 Lyrics(null, null)
@@ -113,7 +113,7 @@ class LyricsViewModel @Inject constructor(
                 artist = s.queryArtist,
                 title = s.queryTitle,
                 album = connection.currentItem.value?.mediaMetadata?.albumTitle?.toString().orEmpty(),
-                durationMs = connection.durationMs.value.coerceAtLeast(0),
+                durationMs = trackDurationMs(),
             )
             _state.update { it.copy(searching = false) }
             applyLyrics(lyrics)
@@ -135,6 +135,17 @@ class LyricsViewModel @Inject constructor(
 
     fun seekToLine(index: Int) {
         _lines.value.getOrNull(index)?.let { connection.seekTo(it.timeMs) }
+    }
+
+    /**
+     * The MediaStore duration carried in the item's extras: it matches the file
+     * exactly (LRCLIB matches on duration) and, unlike the player's duration,
+     * is already correct at the moment of a gapless transition.
+     */
+    private fun trackDurationMs(): Long {
+        val extras = connection.currentItem.value?.mediaMetadata?.extras
+        val fromExtras = extras?.getLong(EXTRA_DURATION_MS, 0L) ?: 0L
+        return if (fromExtras > 0) fromExtras else connection.durationMs.value.coerceAtLeast(0)
     }
 
     private fun positionTicker() = flow {
