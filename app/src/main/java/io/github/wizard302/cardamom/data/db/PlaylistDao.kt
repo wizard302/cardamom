@@ -27,6 +27,9 @@ interface PlaylistDao {
     )
     fun observePlaylists(): Flow<List<PlaylistWithCount>>
 
+    @Query("SELECT name FROM playlists")
+    suspend fun allNames(): List<String>
+
     @Query("SELECT * FROM playlists WHERE id = :playlistId")
     fun observePlaylist(playlistId: Long): Flow<PlaylistEntity?>
 

@@ -1,6 +1,8 @@
 package io.github.wizard302.cardamom.ui.settings
 
 import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -24,6 +26,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,10 +55,32 @@ fun SettingsScreen(
     val syncedLyrics by viewModel.syncedLyricsHighlighting.collectAsStateWithLifecycle()
     val pauseOnDisconnect by viewModel.pauseOnDisconnect.collectAsStateWithLifecycle()
     val resumeOnConnect by viewModel.resumeOnConnect.collectAsStateWithLifecycle()
+    val deviceImport by viewModel.deviceImport.collectAsStateWithLifecycle()
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val rescanStarted = stringResource(R.string.settings_rescan_started)
+
+    val pickFolderLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree(),
+    ) { uri ->
+        if (uri != null) viewModel.importPlaylistsFromFolder(uri)
+    }
+
+    val importing = deviceImport is SettingsViewModel.DeviceImport.Running
+    val importDoneMessage = (deviceImport as? SettingsViewModel.DeviceImport.Done)?.let { done ->
+        if (done.playlists == 0) {
+            stringResource(R.string.settings_import_device_empty)
+        } else {
+            stringResource(R.string.settings_import_device_done, done.playlists, done.tracks)
+        }
+    }
+    LaunchedEffect(importDoneMessage) {
+        if (importDoneMessage != null) {
+            snackbarHostState.showSnackbar(importDoneMessage)
+            viewModel.clearDeviceImport()
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -138,6 +163,17 @@ fun SettingsScreen(
                         viewModel.rescanLibrary()
                         scope.launch { snackbarHostState.showSnackbar(rescanStarted) }
                     }
+                    .padding(horizontal = 16.dp, vertical = 16.dp),
+            )
+            Text(
+                text = if (importing) {
+                    stringResource(R.string.settings_import_device_running)
+                } else {
+                    stringResource(R.string.settings_import_device)
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(enabled = !importing) { pickFolderLauncher.launch(null) }
                     .padding(horizontal = 16.dp, vertical = 16.dp),
             )
 

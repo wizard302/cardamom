@@ -144,6 +144,10 @@
     <string name="settings_library">Медиатека</string>
     <string name="settings_rescan">Пересканировать медиатеку</string>
     <string name="settings_rescan_started">Пересканирование медиатеки…</string>
+    <string name="settings_import_device">Импортировать плейлисты из папки…</string>
+    <string name="settings_import_device_running">Импорт плейлистов…</string>
+    <string name="settings_import_device_done">Импортировано плейлистов: %1$d (треков: %2$d).</string>
+    <string name="settings_import_device_empty">В этой папке плейлисты не найдены.</string>
     <string name="widget_description">Сейчас играет: обложка, название, пуск/пауза и следующий трек.</string>
     <string name="widget_nothing_playing">Ничего не играет</string>
 
