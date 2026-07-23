@@ -18,6 +18,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Lyrics
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -82,6 +83,19 @@ fun LyricsPanel(
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.weight(1f),
                 )
+                if (state.hasSynced) {
+                    IconButton(onClick = viewModel::toggleSyncedHighlighting) {
+                        Icon(
+                            imageVector = Icons.Rounded.Lyrics,
+                            contentDescription = stringResource(R.string.settings_synced_lyrics),
+                            tint = if (syncedHighlighting) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                        )
+                    }
+                }
                 IconButton(onClick = { showSearch = !showSearch }) {
                     Icon(
                         imageVector = Icons.Rounded.Search,

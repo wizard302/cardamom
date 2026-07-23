@@ -40,7 +40,7 @@ data class LyricsUiState(
 class LyricsViewModel @Inject constructor(
     private val connection: PlayerConnection,
     private val lyricsRepository: LyricsRepository,
-    settingsRepository: SettingsRepository,
+    private val settingsRepository: SettingsRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(LyricsUiState())
@@ -51,6 +51,12 @@ class LyricsViewModel @Inject constructor(
 
     val syncedHighlighting: StateFlow<Boolean> = settingsRepository.syncedLyricsHighlighting
         .stateIn(viewModelScope, SharingStarted.Eagerly, true)
+
+    /** Toggles karaoke (synced) highlighting from the lyrics screen. */
+    fun toggleSyncedHighlighting() {
+        val enabled = !syncedHighlighting.value
+        viewModelScope.launch { settingsRepository.setSyncedLyricsHighlighting(enabled) }
+    }
 
     /** Line index active at the current playback position; -1 before the first. */
     val activeLine: StateFlow<Int> =
