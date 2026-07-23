@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  A cardamom pod with an eighth note cut out of it. The note is a hole rather
-  than a second colour so the same shape doubles as the monochrome
-  (themed-icon) variant, where everything is tinted a single colour.
+  A cardamom pod cross-section: a pale disc with three seeds. The seeds are
+  holes (evenOdd) rather than a second colour, so the same shape doubles as
+  the monochrome (themed-icon) variant, where everything is tinted one colour.
+  Geometry is the cardamom.svg logo mapped from its 240px viewport (centre
+  120,120) into the 108px adaptive-icon canvas (centre 54,54, scale 0.45).
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
@@ -10,7 +12,10 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
     <path
-        android:fillColor="#E8C26E"
+        android:fillColor="#E7EDD8"
         android:fillType="evenOdd"
-        android:pathData="M54,14 C74,36 74,72 54,94 C34,72 34,36 54,14 Z M51,32 L55,32 L55,67 A9,7 0 1,1 51,61.18 L51,32 Z" />
+        android:pathData="M33.3,54 a20.7,20.7 0 1,0 41.4,0 a20.7,20.7 0 1,0 -41.4,0 Z
+M57.37,54 a4.28,4.28 0 1,0 8.56,0 a4.28,4.28 0 1,0 -8.56,0 Z
+M45.9,60.62 a4.28,4.28 0 1,0 8.56,0 a4.28,4.28 0 1,0 -8.56,0 Z
+M45.9,47.39 a4.28,4.28 0 1,0 8.56,0 a4.28,4.28 0 1,0 -8.56,0 Z" />
 </vector>
