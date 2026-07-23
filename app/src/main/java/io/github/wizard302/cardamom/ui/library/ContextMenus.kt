@@ -78,6 +78,7 @@ fun CollectionContextMenu(
     onPlayNext: () -> Unit,
     onAddToQueue: () -> Unit,
     offset: DpOffset = DpOffset.Zero,
+    onAddToPlaylist: (() -> Unit)? = null,
     onGoToArtist: (() -> Unit)? = null,
     onEditTags: (() -> Unit)? = null,
     onFetchTags: (() -> Unit)? = null,
@@ -86,6 +87,9 @@ fun CollectionContextMenu(
         MenuItem(R.string.menu_play) { onPlay(); onDismiss() }
         MenuItem(R.string.menu_play_next) { onPlayNext(); onDismiss() }
         MenuItem(R.string.menu_add_to_queue) { onAddToQueue(); onDismiss() }
+        if (onAddToPlaylist != null) {
+            MenuItem(R.string.menu_add_to_playlist) { onAddToPlaylist(); onDismiss() }
+        }
         if (onGoToArtist != null) {
             MenuItem(R.string.menu_go_to_artist) { onGoToArtist(); onDismiss() }
         }

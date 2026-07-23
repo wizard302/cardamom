@@ -142,19 +142,23 @@ fun ConfirmDialog(
 fun AddToPlaylistDialog(
     tracks: List<Track>,
     onDone: () -> Unit,
+    suggestedName: String = "",
     viewModel: PlaylistViewModel = hiltViewModel(),
 ) {
     val playlists by viewModel.playlists.collectAsStateWithLifecycle()
-    var creating by remember { mutableStateOf(false) }
+    // Start on the name step when a name is suggested (e.g. creating from a folder).
+    var creating by remember { mutableStateOf(suggestedName.isNotBlank()) }
 
     if (creating) {
         NameDialog(
             title = stringResource(R.string.playlist_new),
             confirmLabel = stringResource(R.string.action_create),
+            initial = suggestedName,
             onConfirm = { name ->
                 viewModel.createPlaylistWith(name, tracks)
                 onDone()
             },
+            // Backing out of the name step drops to the existing-playlist list.
             onDismiss = { creating = false },
         )
         return

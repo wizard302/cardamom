@@ -51,6 +51,7 @@ fun FoldersTab(
     onPlay: (List<Track>, Int) -> Unit,
     onPlayNext: (List<Track>) -> Unit,
     onAddToQueue: (List<Track>) -> Unit,
+    onAddToPlaylist: (String, List<Track>) -> Unit,
     onMenuAction: (TrackMenuAction, Track) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -99,6 +100,7 @@ fun FoldersTab(
                     onPlay = { onPlay(it, 0) },
                     onPlayNext = onPlayNext,
                     onAddToQueue = onAddToQueue,
+                    onAddToPlaylist = { onAddToPlaylist(name, it) },
                     onMenuAction = onMenuAction,
                 )
             }
@@ -123,6 +125,7 @@ private fun FolderRow(
     onPlay: (List<Track>) -> Unit,
     onPlayNext: (List<Track>) -> Unit,
     onAddToQueue: (List<Track>) -> Unit,
+    onAddToPlaylist: (List<Track>) -> Unit,
     onMenuAction: (TrackMenuAction, Track) -> Unit,
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -168,6 +171,7 @@ private fun FolderRow(
             onPlay = { onPlay(tracksProvider()) },
             onPlayNext = { onPlayNext(tracksProvider()) },
             onAddToQueue = { onAddToQueue(tracksProvider()) },
+            onAddToPlaylist = { onAddToPlaylist(tracksProvider()) },
             offset = with(density) { DpOffset(pressPos.x.toDp(), pressPos.y.toDp()) },
         )
     }

@@ -98,6 +98,8 @@ fun MiniPlayer(
         positionMs = positionMs,
         durationMs = durationMs,
         onPlayPause = viewModel::togglePlayPause,
+        onPrevious = viewModel::previous,
+        onNext = viewModel::next,
         onClick = onClick,
         modifier = modifier,
     )
@@ -110,6 +112,8 @@ private fun MiniPlayerContent(
     positionMs: Long,
     durationMs: Long,
     onPlayPause: () -> Unit,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -154,10 +158,22 @@ private fun MiniPlayerContent(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
+                IconButton(onClick = onPrevious) {
+                    Icon(
+                        imageVector = Icons.Rounded.SkipPrevious,
+                        contentDescription = stringResource(R.string.action_previous),
+                    )
+                }
                 IconButton(onClick = onPlayPause) {
                     Icon(
                         imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                         contentDescription = stringResource(R.string.action_play_pause),
+                    )
+                }
+                IconButton(onClick = onNext) {
+                    Icon(
+                        imageVector = Icons.Rounded.SkipNext,
+                        contentDescription = stringResource(R.string.action_next),
                     )
                 }
             }

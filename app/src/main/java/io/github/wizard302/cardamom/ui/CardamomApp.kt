@@ -148,6 +148,8 @@ private fun MainNavigation(
     var showNowPlaying by rememberSaveable { mutableStateOf(false) }
     var detailsTrack by remember { mutableStateOf<Track?>(null) }
     var addToPlaylistTracks by remember { mutableStateOf<List<Track>?>(null) }
+    // Pre-fills the new-playlist name when adding a whole folder at once.
+    var addToPlaylistName by remember { mutableStateOf("") }
 
     // Now Playing is an overlay, not a nav destination, so leaving it for the tag
     // editor or the fetcher would otherwise drop the user back in the library.
@@ -165,7 +167,10 @@ private fun MainNavigation(
             TrackMenuAction.PLAY -> libraryViewModel.play(listOf(track), 0)
             TrackMenuAction.PLAY_NEXT -> libraryViewModel.playNext(listOf(track))
             TrackMenuAction.ADD_TO_QUEUE -> libraryViewModel.addToQueue(listOf(track))
-            TrackMenuAction.ADD_TO_PLAYLIST -> addToPlaylistTracks = listOf(track)
+            TrackMenuAction.ADD_TO_PLAYLIST -> {
+                addToPlaylistName = ""
+                addToPlaylistTracks = listOf(track)
+            }
             TrackMenuAction.GO_TO_ARTIST -> navController.navigate("artist/${track.artistId}")
             TrackMenuAction.GO_TO_ALBUM -> navController.navigate("album/${track.albumId}")
             TrackMenuAction.EDIT_TAGS -> navController.navigate("tagEditor/${track.id}")
@@ -198,6 +203,10 @@ private fun MainNavigation(
                             onEditAlbumTags = { navController.navigate("albumTagEditor/$it") },
                             onFetchAlbumMetadata = { navController.navigate("albumFetcher/$it") },
                             onSettingsClick = { navController.navigate("settings") },
+                            onAddFolderToPlaylist = { name, folderTracks ->
+                                addToPlaylistName = name
+                                addToPlaylistTracks = folderTracks
+                            },
                             onTrackMenuAction = ::onTrackMenuAction,
                         )
                     }
@@ -301,7 +310,14 @@ private fun MainNavigation(
         TrackDetailsDialog(track = track, onDismiss = { detailsTrack = null })
     }
     addToPlaylistTracks?.let { tracks ->
-        AddToPlaylistDialog(tracks = tracks, onDone = { addToPlaylistTracks = null })
+        AddToPlaylistDialog(
+            tracks = tracks,
+            suggestedName = addToPlaylistName,
+            onDone = {
+                addToPlaylistTracks = null
+                addToPlaylistName = ""
+            },
+        )
     }
 }
 
@@ -341,6 +357,7 @@ private fun LibraryScreen(
     onEditAlbumTags: (Long) -> Unit,
     onFetchAlbumMetadata: (Long) -> Unit,
     onSettingsClick: () -> Unit,
+    onAddFolderToPlaylist: (String, List<Track>) -> Unit,
     onTrackMenuAction: (TrackMenuAction, Track) -> Unit,
 ) {
     val tracks by libraryViewModel.tracks.collectAsStateWithLifecycle()
@@ -482,6 +499,7 @@ private fun LibraryScreen(
                     onPlay = { folderTracks, index -> libraryViewModel.play(folderTracks, index) },
                     onPlayNext = libraryViewModel::playNext,
                     onAddToQueue = libraryViewModel::addToQueue,
+                    onAddToPlaylist = onAddFolderToPlaylist,
                     onMenuAction = onTrackMenuAction,
                 )
             }
