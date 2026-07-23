@@ -46,8 +46,13 @@ class PlayerWidget : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray,
     ) {
-        val views = buildViews(context, state)
-        appWidgetIds.forEach { appWidgetManager.updateAppWidget(it, views) }
+        // Artwork decoding happens off the main thread; updateAppWidget is a
+        // plain binder call and is safe from a background thread.
+        val appContext = context.applicationContext
+        executor.execute {
+            val views = buildViews(appContext, state, resolveArtwork(appContext, state.artworkUri))
+            appWidgetIds.forEach { appWidgetManager.updateAppWidget(it, views) }
+        }
     }
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -90,6 +95,15 @@ class PlayerWidget : AppWidgetProvider() {
         var state: WidgetState = WidgetState()
             private set
 
+        // Single worker so widget redraws never decode bitmaps on the main
+        // thread (update() is called from player listener callbacks).
+        private val executor = java.util.concurrent.Executors.newSingleThreadExecutor()
+
+        // Last decoded artwork, keyed by its uri: track changes within one
+        // album (the common case) skip the decode entirely.
+        @Volatile
+        private var cachedArtwork: Pair<Uri, Bitmap>? = null
+
         /** Called by PlaybackService whenever the visible state changes. */
         fun update(context: Context, player: Player) {
             val metadata = player.mediaMetadata
@@ -99,18 +113,28 @@ class PlayerWidget : AppWidgetProvider() {
                 artworkUri = metadata.artworkUri,
                 isPlaying = player.isPlaying,
             )
-            push(context)
+            val appContext = context.applicationContext
+            executor.execute { push(appContext) }
         }
 
         private fun push(context: Context) {
             val manager = AppWidgetManager.getInstance(context)
             val ids = manager.getAppWidgetIds(ComponentName(context, PlayerWidget::class.java))
             if (ids.isEmpty()) return
-            val views = buildViews(context, state)
+            val snapshot = state
+            val views = buildViews(context, snapshot, resolveArtwork(context, snapshot.artworkUri))
             ids.forEach { manager.updateAppWidget(it, views) }
         }
 
-        private fun buildViews(context: Context, state: WidgetState): RemoteViews =
+        private fun resolveArtwork(context: Context, uri: Uri?): Bitmap? {
+            if (uri == null) return null
+            cachedArtwork?.let { (cachedUri, bitmap) -> if (cachedUri == uri) return bitmap }
+            val decoded = loadArtwork(context, uri)
+            cachedArtwork = decoded?.let { uri to it }
+            return decoded
+        }
+
+        private fun buildViews(context: Context, state: WidgetState, artwork: Bitmap?): RemoteViews =
             RemoteViews(context.packageName, R.layout.widget_player).apply {
                 setTextViewText(
                     R.id.widget_title,
@@ -122,7 +146,6 @@ class PlayerWidget : AppWidgetProvider() {
                     if (state.isPlaying) R.drawable.ic_widget_pause else R.drawable.ic_widget_play,
                 )
 
-                val artwork = state.artworkUri?.let { loadArtwork(context, it) }
                 if (artwork != null) {
                     setImageViewBitmap(R.id.widget_artwork, artwork)
                 } else {
