@@ -4,7 +4,11 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.media.AudioDeviceCallback
+import android.media.AudioDeviceInfo
 import android.media.AudioManager
+import android.os.Handler
+import android.os.Looper
 import androidx.core.content.ContextCompat
 import androidx.media3.common.Player
 
@@ -13,6 +17,10 @@ import androidx.media3.common.Player
  * `setHandleAudioBecomingNoisy`, because both edges are user-configurable:
  * pausing on disconnect can be turned off, and resuming on reconnect must only
  * happen when *we* were the ones who paused.
+ *
+ * Disconnects arrive as ACTION_AUDIO_BECOMING_NOISY (covers wired and
+ * Bluetooth). Connects are observed through [AudioDeviceCallback], which —
+ * unlike ACTION_HEADSET_PLUG — also fires for Bluetooth and USB audio.
  */
 class HeadphoneWatcher(
     private val context: Context,
@@ -24,24 +32,28 @@ class HeadphoneWatcher(
     /** True only between an auto-pause and the next plug-in or manual play. */
     private var pausedByDisconnect = false
 
+    private val audioManager =
+        context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            when (intent?.action) {
-                AudioManager.ACTION_AUDIO_BECOMING_NOISY -> {
-                    if (pauseOnDisconnect && player.isPlaying) {
-                        player.pause()
-                        pausedByDisconnect = true
-                    }
-                }
-                // Sticky broadcast: the current state arrives on registration too,
-                // which is harmless because pausedByDisconnect is false by then.
-                AudioManager.ACTION_HEADSET_PLUG -> {
-                    val pluggedIn = intent.getIntExtra("state", 0) == 1
-                    if (pluggedIn && resumeOnConnect && pausedByDisconnect) {
-                        pausedByDisconnect = false
-                        player.play()
-                    }
-                }
+            if (intent?.action == AudioManager.ACTION_AUDIO_BECOMING_NOISY &&
+                pauseOnDisconnect && player.isPlaying
+            ) {
+                player.pause()
+                pausedByDisconnect = true
+            }
+        }
+    }
+
+    // Fires with the current devices on registration too — harmless, because
+    // pausedByDisconnect is still false at that point.
+    private val deviceCallback = object : AudioDeviceCallback() {
+        override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>) {
+            val headphonesConnected = addedDevices.any { it.isSink && it.type in RESUME_DEVICE_TYPES }
+            if (headphonesConnected && resumeOnConnect && pausedByDisconnect) {
+                pausedByDisconnect = false
+                player.play()
             }
         }
     }
@@ -54,16 +66,24 @@ class HeadphoneWatcher(
     }
 
     fun register() {
-        val filter = IntentFilter().apply {
-            addAction(AudioManager.ACTION_AUDIO_BECOMING_NOISY)
-            addAction(AudioManager.ACTION_HEADSET_PLUG)
-        }
+        val filter = IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY)
         ContextCompat.registerReceiver(context, receiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+        audioManager.registerAudioDeviceCallback(deviceCallback, Handler(Looper.getMainLooper()))
         player.addListener(playerListener)
     }
 
     fun unregister() {
         player.removeListener(playerListener)
+        audioManager.unregisterAudioDeviceCallback(deviceCallback)
         context.unregisterReceiver(receiver)
+    }
+
+    private companion object {
+        val RESUME_DEVICE_TYPES = setOf(
+            AudioDeviceInfo.TYPE_WIRED_HEADSET,
+            AudioDeviceInfo.TYPE_WIRED_HEADPHONES,
+            AudioDeviceInfo.TYPE_BLUETOOTH_A2DP,
+            AudioDeviceInfo.TYPE_USB_HEADSET,
+        )
     }
 }
