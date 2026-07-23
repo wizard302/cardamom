@@ -38,6 +38,17 @@ class M3uWriterTest {
     }
 
     @Test
+    fun `flattens newlines in artist and title`() {
+        val out = M3uWriter.write(
+            listOf(M3uEntry("/music/a.mp3", 10, "Bad\nArtist", "Line\r\nBreak Title")),
+        )
+        val lines = out.trimEnd().lines()
+        assertEquals("#EXTINF:10,Bad Artist - Line Break Title", lines[1])
+        assertEquals("/music/a.mp3", lines[2])
+        assertEquals(3, lines.size)
+    }
+
+    @Test
     fun `keeps absolute path when outside base dir`() {
         val out = M3uWriter.write(
             listOf(M3uEntry("/other/a.mp3", 1, "A", "T")),

@@ -81,6 +81,20 @@ class M3uMatcherTest {
     }
 
     @Test
+    fun `ambiguous duplicate filenames without parent match stay unresolved`() {
+        val library = listOf(
+            track(8, "/music/live/intro.mp3"),
+            track(9, "/music/studio/intro.mp3"),
+        )
+        val result = M3uMatcher.match(
+            // Parent dir "downloads" matches neither candidate; no metadata either.
+            listOf(ParsedM3uEntry("/elsewhere/downloads/intro.mp3", null, null, null)),
+            library,
+        )
+        assertNull(result.single().track)
+    }
+
+    @Test
     fun `reports unresolved entries`() {
         val library = listOf(track(7, "/music/a.mp3", title = "A", artist = "X"))
         val result = M3uMatcher.match(
