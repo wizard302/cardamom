@@ -35,6 +35,7 @@ class SettingsRepository @Inject constructor(
     private val bassBoostKey = intPreferencesKey("eq_bass_boost")
     private val virtualizerKey = intPreferencesKey("eq_virtualizer")
     private val excludedFoldersKey = stringSetPreferencesKey("excluded_folders")
+    private val libraryTabKey = intPreferencesKey("library_tab")
 
     val themeMode: Flow<ThemeMode> = context.settingsDataStore.data.map { prefs ->
         ThemeMode.entries.firstOrNull { it.name == prefs[themeModeKey] } ?: ThemeMode.SYSTEM
@@ -139,6 +140,13 @@ class SettingsRepository @Inject constructor(
 
     suspend fun setExcludedFolders(folders: Set<String>) {
         context.settingsDataStore.edit { it[excludedFoldersKey] = folders }
+    }
+
+    /** Last-opened library tab index, restored on the next launch. */
+    val libraryTab: Flow<Int> = context.settingsDataStore.data.map { it[libraryTabKey] ?: 0 }
+
+    suspend fun setLibraryTab(index: Int) {
+        context.settingsDataStore.edit { it[libraryTabKey] = index }
     }
 
     suspend fun setThemeMode(mode: ThemeMode) {

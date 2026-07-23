@@ -36,6 +36,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -85,6 +86,7 @@ import io.github.wizard302.cardamom.ui.settings.ScannedFoldersScreen
 import io.github.wizard302.cardamom.ui.settings.SettingsScreen
 import io.github.wizard302.cardamom.ui.tageditor.AlbumTagEditorScreen
 import io.github.wizard302.cardamom.ui.tageditor.TagEditorScreen
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 private val audioPermission: String =
@@ -387,6 +389,12 @@ private fun LibraryScreen(
         stringResource(R.string.tab_folders),
     )
     val pagerState = rememberPagerState { tabTitles.size }
+    // Restore the last-opened tab, then persist the current one on every change.
+    LaunchedEffect(Unit) {
+        val initial = libraryViewModel.libraryTab.first { it in 0 until tabTitles.size }
+        pagerState.scrollToPage(initial)
+        snapshotFlow { pagerState.currentPage }.collect(libraryViewModel::setLibraryTab)
+    }
     val scope = rememberCoroutineScope()
     val emptyText = if (query.isBlank()) {
         stringResource(R.string.library_empty)

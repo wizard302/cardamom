@@ -55,6 +55,12 @@ class LibraryViewModel @Inject constructor(
             list.filter { it.matches(query) }.sortedWith(sort.comparator())
         }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
+    /** Last-opened library tab, restored on launch; -1 until the store is read. */
+    val libraryTab: StateFlow<Int> =
+        settings.libraryTab.stateIn(viewModelScope, SharingStarted.Eagerly, -1)
+
+    fun setLibraryTab(index: Int) = viewModelScope.launch { settings.setLibraryTab(index) }
+
     fun setQuery(query: String) {
         _query.value = query
     }
