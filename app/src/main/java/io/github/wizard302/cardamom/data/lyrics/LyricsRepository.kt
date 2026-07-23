@@ -42,7 +42,11 @@ class LyricsRepository @Inject constructor(
 
         val durationSec = (durationMs / 1000).toInt()
         val cached = runCatching { lyricsDao.get(artist, title, durationSec) }.getOrNull()
-        val fetched = if (cached == null) {
+        // Negative results expire: lyrics that appear on LRCLIB later should be
+        // picked up automatically instead of requiring a manual re-search.
+        val staleNegative = cached != null && !cached.found &&
+            System.currentTimeMillis() - cached.fetchedAt > NEGATIVE_CACHE_TTL_MS
+        val fetched = if (cached == null || staleNegative) {
             fetchAndCache(artist, title, album, durationSec)
         } else {
             FetchResult(cached, networkError = false)
@@ -108,3 +112,4 @@ class LyricsRepository @Inject constructor(
 }
 
 private const val HTTP_NOT_FOUND = 404
+private const val NEGATIVE_CACHE_TTL_MS = 14L * 24 * 60 * 60 * 1000
