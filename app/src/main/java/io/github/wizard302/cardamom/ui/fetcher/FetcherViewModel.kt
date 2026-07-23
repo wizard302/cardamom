@@ -11,6 +11,7 @@ import io.github.wizard302.cardamom.data.remote.TrackCandidate
 import io.github.wizard302.cardamom.data.tags.CoverEdit
 import io.github.wizard302.cardamom.data.tags.TagRepository
 import io.github.wizard302.cardamom.data.tags.TrackTags
+import io.github.wizard302.cardamom.data.tags.sniffImageMime
 import io.github.wizard302.cardamom.data.tags.writeWithScopedConsent
 import io.github.wizard302.cardamom.ui.tageditor.TagEditorEvent
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -55,14 +56,11 @@ class FetcherViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val trackId: Long = checkNotNull(savedStateHandle["trackId"])
-    private val track = libraryRepository.tracks.value.firstOrNull { it.id == trackId }
 
-    private val _state = MutableStateFlow(
-        FetcherUiState(
-            queryArtist = track?.artist.orEmpty(),
-            queryTitle = track?.title.orEmpty(),
-        ),
-    )
+    /** Resolved asynchronously: the library may still be scanning after process death. */
+    private var track: io.github.wizard302.cardamom.data.media.Track? = null
+
+    private val _state = MutableStateFlow(FetcherUiState())
     val state: StateFlow<FetcherUiState> = _state.asStateFlow()
 
     private val _events = MutableSharedFlow<TagEditorEvent>(extraBufferCapacity = 1)
@@ -71,9 +69,18 @@ class FetcherViewModel @Inject constructor(
     private var consent: CompletableDeferred<Boolean>? = null
 
     init {
-        track?.let {
-            viewModelScope.launch {
-                val read = tagRepository.read(it.contentUri)
+        viewModelScope.launch {
+            val resolved = libraryRepository.awaitTrack(trackId)
+            track = resolved
+            if (resolved == null) {
+                _state.update { it.copy(status = SearchStatus.ERROR) }
+                return@launch
+            }
+            _state.update {
+                it.copy(queryArtist = resolved.artist, queryTitle = resolved.title)
+            }
+            launch {
+                val read = tagRepository.read(resolved.contentUri)
                 if (read != null) _state.update { s -> s.copy(currentTags = read.tags) }
             }
             search()
@@ -141,7 +148,8 @@ class FetcherViewModel @Inject constructor(
     }
 
     fun apply() {
-        val uri = track?.contentUri ?: return
+        val saved = track ?: return
+        val uri = saved.contentUri
         val s = _state.value
         val candidate = s.selected ?: return
         val merged = s.currentTags.copy(
@@ -151,7 +159,7 @@ class FetcherViewModel @Inject constructor(
             year = if (s.applyYear) candidate.year else s.currentTags.year,
         )
         val coverEdit = if (s.applyCover && s.cover != null) {
-            CoverEdit.Replace(s.cover, "image/jpeg")
+            CoverEdit.Replace(s.cover, sniffImageMime(s.cover))
         } else {
             CoverEdit.Keep
         }
@@ -164,7 +172,7 @@ class FetcherViewModel @Inject constructor(
                 write = { tagRepository.write(uri, merged, coverEdit) },
             )
             if (ok) {
-                tagRepository.notifyFileChanged(track.path)
+                tagRepository.notifyFileChanged(saved.path)
                 libraryRepository.refresh()
             }
             _state.update { it.copy(saving = false) }

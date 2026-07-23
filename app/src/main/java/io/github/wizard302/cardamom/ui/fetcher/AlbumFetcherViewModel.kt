@@ -11,6 +11,7 @@ import io.github.wizard302.cardamom.data.remote.AlbumCandidate
 import io.github.wizard302.cardamom.data.remote.AlbumReleaseDetail
 import io.github.wizard302.cardamom.data.remote.MetadataRepository
 import io.github.wizard302.cardamom.data.tags.CoverEdit
+import io.github.wizard302.cardamom.data.tags.sniffImageMime
 import io.github.wizard302.cardamom.data.tags.TagRepository
 import io.github.wizard302.cardamom.data.tags.writeWithScopedConsent
 import io.github.wizard302.cardamom.ui.tageditor.TagEditorEvent
@@ -62,9 +63,9 @@ class AlbumFetcherViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val albumId: Long = checkNotNull(savedStateHandle["albumId"])
-    private val albumTracks: List<Track> = libraryRepository.tracks.value
-        .filter { it.albumId == albumId }
-        .sortedBy { it.trackNumber }
+
+    /** Resolved asynchronously: the library may still be scanning after process death. */
+    private var albumTracks: List<Track> = emptyList()
 
     private val _state = MutableStateFlow(AlbumFetcherUiState())
     val state: StateFlow<AlbumFetcherUiState> = _state.asStateFlow()
@@ -75,14 +76,21 @@ class AlbumFetcherViewModel @Inject constructor(
     private var consent: CompletableDeferred<Boolean>? = null
 
     init {
-        val album = libraryRepository.albums.value.firstOrNull { it.id == albumId }
-        _state.update {
-            it.copy(
-                queryArtist = album?.artist ?: albumTracks.firstOrNull()?.artist.orEmpty(),
-                queryAlbum = album?.title ?: albumTracks.firstOrNull()?.album.orEmpty(),
-            )
+        viewModelScope.launch {
+            albumTracks = libraryRepository.awaitAlbumTracks(albumId).sortedBy { it.trackNumber }
+            if (albumTracks.isEmpty()) {
+                _state.update { it.copy(status = SearchStatus.ERROR) }
+                return@launch
+            }
+            val album = libraryRepository.albums.value.firstOrNull { it.id == albumId }
+            _state.update {
+                it.copy(
+                    queryArtist = album?.artist ?: albumTracks.first().artist,
+                    queryAlbum = album?.title ?: albumTracks.first().album,
+                )
+            }
+            search()
         }
-        search()
     }
 
     fun setQueryArtist(v: String) = _state.update { it.copy(queryArtist = v) }
@@ -161,7 +169,7 @@ class AlbumFetcherViewModel @Inject constructor(
         val release = s.release ?: return
         if (albumTracks.isEmpty()) return
         val coverEdit = if (s.applyCover && s.cover != null) {
-            CoverEdit.Replace(s.cover, "image/jpeg")
+            CoverEdit.Replace(s.cover, sniffImageMime(s.cover))
         } else {
             CoverEdit.Keep
         }
