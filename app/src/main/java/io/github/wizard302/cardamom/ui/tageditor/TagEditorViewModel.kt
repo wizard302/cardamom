@@ -49,7 +49,9 @@ class TagEditorViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val trackId: Long = checkNotNull(savedStateHandle["trackId"])
-    private val track = libraryRepository.tracks.value.firstOrNull { it.id == trackId }
+
+    /** Resolved asynchronously: the library may still be scanning after process death. */
+    private var track: io.github.wizard302.cardamom.data.media.Track? = null
 
     private val _state = MutableStateFlow(TagEditorUiState())
     val state: StateFlow<TagEditorUiState> = _state.asStateFlow()
@@ -64,20 +66,21 @@ class TagEditorViewModel @Inject constructor(
     }
 
     private fun load() {
-        val uri = track?.contentUri
-        if (uri == null) {
-            _state.update { it.copy(loading = false, readFailed = true) }
-            return
-        }
         viewModelScope.launch {
-            val result = tagRepository.read(uri)
+            val resolved = libraryRepository.awaitTrack(trackId)
+            track = resolved
+            if (resolved == null) {
+                _state.update { it.copy(loading = false, readFailed = true) }
+                return@launch
+            }
+            val result = tagRepository.read(resolved.contentUri)
             if (result == null) {
                 _state.update { it.copy(loading = false, readFailed = true) }
             } else {
                 _state.update {
                     it.copy(
                         loading = false,
-                        title = result.tags.title.ifEmpty { track.title },
+                        title = result.tags.title.ifEmpty { resolved.title },
                         tags = result.tags,
                         cover = result.cover,
                     )
@@ -107,7 +110,8 @@ class TagEditorViewModel @Inject constructor(
     }
 
     fun save() {
-        val uri = track?.contentUri ?: return
+        val saved = track ?: return
+        val uri = saved.contentUri
         val current = _state.value
         viewModelScope.launch {
             _state.update { it.copy(saving = true) }
@@ -118,8 +122,8 @@ class TagEditorViewModel @Inject constructor(
                 write = { tagRepository.write(uri, current.tags, current.coverEdit) },
             )
             if (ok) {
-                tagRepository.notifyFileChanged(track.path)
-                invalidateArtworkCache(track.albumArtUri)
+                tagRepository.notifyFileChanged(saved.path)
+                invalidateArtworkCache(saved.albumArtUri)
                 libraryRepository.refresh()
             }
             _state.update { it.copy(saving = false) }

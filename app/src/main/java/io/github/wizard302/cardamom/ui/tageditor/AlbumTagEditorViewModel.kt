@@ -54,9 +54,9 @@ class AlbumTagEditorViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val albumId: Long = checkNotNull(savedStateHandle["albumId"])
-    private val tracks: List<Track> = libraryRepository.tracks.value
-        .filter { it.albumId == albumId }
-        .sortedBy { it.trackNumber }
+
+    /** Resolved asynchronously: the library may still be scanning after process death. */
+    private var tracks: List<Track> = emptyList()
 
     private val _state = MutableStateFlow(AlbumTagState())
     val state: StateFlow<AlbumTagState> = _state.asStateFlow()
@@ -71,9 +71,10 @@ class AlbumTagEditorViewModel @Inject constructor(
     }
 
     private fun load() {
-        val album = libraryRepository.albums.value.firstOrNull { it.id == albumId }
-        val first = tracks.firstOrNull()
         viewModelScope.launch {
+            tracks = libraryRepository.awaitAlbumTracks(albumId).sortedBy { it.trackNumber }
+            val album = libraryRepository.albums.value.firstOrNull { it.id == albumId }
+            val first = tracks.firstOrNull()
             val read = first?.let { tagRepository.read(it.contentUri) }
             _state.update {
                 it.copy(

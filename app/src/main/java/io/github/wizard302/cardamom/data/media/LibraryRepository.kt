@@ -18,9 +18,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -103,11 +106,36 @@ class LibraryRepository @Inject constructor(
         scope.launch { doScan() }
     }
 
+    /**
+     * Resolves a track by id, waiting for the initial scan when the library is
+     * still empty (e.g. a ViewModel restored after process death lands on an
+     * editor screen before the scan finished). Null when the track is gone.
+     */
+    suspend fun awaitTrack(id: Long): Track? {
+        tracks.value.firstOrNull { it.id == id }?.let { return it }
+        refresh()
+        return withTimeoutOrNull(AWAIT_SCAN_TIMEOUT_MS) {
+            tracks.mapNotNull { list -> list.firstOrNull { it.id == id } }.first()
+        }
+    }
+
+    /** Same as [awaitTrack], for all tracks of an album. Empty when none exist. */
+    suspend fun awaitAlbumTracks(albumId: Long): List<Track> {
+        tracks.value.filter { it.albumId == albumId }.ifEmpty { null }?.let { return it }
+        refresh()
+        return withTimeoutOrNull(AWAIT_SCAN_TIMEOUT_MS) {
+            tracks.map { list -> list.filter { it.albumId == albumId } }
+                .first { it.isNotEmpty() }
+        } ?: emptyList()
+    }
+
     private suspend fun doScan() {
         _allTracks.value = scanner.scanTracks()
     }
 }
 
 /** True when this track's file sits inside any of the [excludedFolders]. */
+private const val AWAIT_SCAN_TIMEOUT_MS = 5_000L
+
 private fun Track.isUnder(excludedFolders: Set<String>): Boolean =
     excludedFolders.any { path == it || path.startsWith("$it/") }
