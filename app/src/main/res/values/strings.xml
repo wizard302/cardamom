@@ -132,6 +132,9 @@
     <string name="lyrics_title">Lyrics</string>
     <string name="lyrics_search">Search lyrics</string>
     <string name="lyrics_not_found">No lyrics found. Try a manual search.</string>
+    <string name="lyrics_save_to_file">Save lyrics to file</string>
+    <string name="lyrics_saved">Lyrics saved to the file</string>
+    <string name="lyrics_save_failed">Could not save lyrics to the file</string>
 
     <string name="settings_title">Settings</string>
     <string name="settings_appearance">Appearance</string>

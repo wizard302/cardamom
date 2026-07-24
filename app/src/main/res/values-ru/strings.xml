@@ -136,6 +136,9 @@
     <string name="lyrics_title">Текст песни</string>
     <string name="lyrics_search">Поиск текста</string>
     <string name="lyrics_not_found">Текст не найден. Попробуйте поиск вручную.</string>
+    <string name="lyrics_save_to_file">Сохранить текст в файл</string>
+    <string name="lyrics_saved">Текст сохранён в файл</string>
+    <string name="lyrics_save_failed">Не удалось сохранить текст в файл</string>
 
     <string name="settings_title">Настройки</string>
     <string name="settings_appearance">Оформление</string>

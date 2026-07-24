@@ -132,6 +132,35 @@ class TagRepository @Inject constructor(
         }.getOrNull()
     }
 
+    /**
+     * Writes [text] into the file's lyrics tag (TagLib maps `LYRICS` to USLT for
+     * ID3 and to the `LYRICS` field for Vorbis/FLAC/MP4); returns success. LRC
+     * text is stored verbatim — players commonly read timestamps back out of
+     * USLT. Same consent rules as [write]: API 29 rethrows
+     * [RecoverableSecurityException] for the caller to handle.
+     */
+    suspend fun writeLyrics(uri: Uri, text: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val pm = withTagLibFd(uri, "r") { fd ->
+                TagLib.getMetadata(fd, readPictures = false)?.propertyMap
+            } ?: return@withContext false
+
+            pm.setOrRemove("LYRICS", text)
+            // Some writers leave a stale copy under this alias; drop it so the
+            // file has exactly one lyrics field.
+            pm.remove("UNSYNCEDLYRICS")
+
+            withTagLibFd(uri, "rw") { fd -> TagLib.savePropertyMap(fd, pm) } ?: false
+        } catch (t: Throwable) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+                t is RecoverableSecurityException
+            ) {
+                throw t
+            }
+            false
+        }
+    }
+
     /** Asks MediaStore to re-index the file so edited tags surface app-wide. */
     fun notifyFileChanged(path: String) {
         MediaScannerConnection.scanFile(context, arrayOf(path), null, null)

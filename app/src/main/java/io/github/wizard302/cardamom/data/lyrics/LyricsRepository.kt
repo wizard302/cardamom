@@ -16,6 +16,8 @@ data class Lyrics(
     val synced: String?,
     /** True when LRCLIB could not be reached, as opposed to having no match. */
     val networkError: Boolean = false,
+    /** True when [plain] came from the file's own tag rather than LRCLIB. */
+    val plainFromFile: Boolean = false,
 ) {
     val isEmpty: Boolean get() = plain.isNullOrBlank() && synced.isNullOrBlank()
 }
@@ -57,6 +59,7 @@ class LyricsRepository @Inject constructor(
             synced = fetched.entity?.syncedLyrics?.takeIf { it.isNotBlank() },
             // An embedded copy makes a failed lookup irrelevant.
             networkError = fetched.networkError && embeddedPlain == null,
+            plainFromFile = embeddedPlain != null,
         )
     }
 

@@ -1,6 +1,14 @@
 package io.github.wizard302.cardamom.ui.lyrics
 
+import android.Manifest
+import android.app.Activity
+import android.content.pm.PackageManager
+import android.os.Build
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -19,6 +27,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Lyrics
+import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -36,10 +45,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.wizard302.cardamom.R
@@ -56,6 +67,45 @@ fun LyricsPanel(
     val syncedHighlighting by viewModel.syncedHighlighting.collectAsStateWithLifecycle()
 
     var showSearch by remember { mutableStateOf(false) }
+
+    val context = LocalContext.current
+    val consentLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartIntentSenderForResult(),
+    ) { result ->
+        viewModel.onConsentResult(result.resultCode == Activity.RESULT_OK)
+    }
+    // API ≤ 28 writes need the legacy runtime permission; 29+ uses the consent flow.
+    val writePermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted -> if (granted) viewModel.saveToFile() }
+
+    fun onSaveClick() {
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P &&
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            writePermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        } else {
+            viewModel.saveToFile()
+        }
+    }
+
+    val savedMessage = stringResource(R.string.lyrics_saved)
+    val errorMessage = stringResource(R.string.lyrics_save_failed)
+    LaunchedEffect(Unit) {
+        viewModel.events.collect { event ->
+            when (event) {
+                is LyricsEvent.RequestConsent ->
+                    consentLauncher.launch(IntentSenderRequest.Builder(event.intentSender).build())
+                LyricsEvent.Saved ->
+                    Toast.makeText(context, savedMessage, Toast.LENGTH_SHORT).show()
+                LyricsEvent.Error ->
+                    Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
+            }
+        }
+    }
 
     BackHandler(onBack = onClose)
 
@@ -93,6 +143,14 @@ fun LyricsPanel(
                             } else {
                                 MaterialTheme.colorScheme.onSurfaceVariant
                             },
+                        )
+                    }
+                }
+                if (state.canSaveToFile) {
+                    IconButton(onClick = ::onSaveClick, enabled = !state.savingToFile) {
+                        Icon(
+                            imageVector = Icons.Rounded.Save,
+                            contentDescription = stringResource(R.string.lyrics_save_to_file),
                         )
                     }
                 }

@@ -1,6 +1,7 @@
 package io.github.wizard302.cardamom.ui.lyrics
 
-import android.net.Uri
+import android.content.Context
+import android.content.IntentSender
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.wizard302.cardamom.data.lyrics.Lyrics
@@ -8,13 +9,20 @@ import io.github.wizard302.cardamom.data.lyrics.LrcLine
 import io.github.wizard302.cardamom.data.lyrics.LrcParser
 import io.github.wizard302.cardamom.data.lyrics.LyricsRepository
 import io.github.wizard302.cardamom.data.settings.SettingsRepository
+import io.github.wizard302.cardamom.data.tags.TagRepository
+import io.github.wizard302.cardamom.data.tags.writeWithScopedConsent
 import io.github.wizard302.cardamom.playback.EXTRA_DURATION_MS
+import io.github.wizard302.cardamom.playback.EXTRA_PATH
 import io.github.wizard302.cardamom.playback.PlayerConnection
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -34,13 +42,28 @@ data class LyricsUiState(
     val searching: Boolean = false,
     val notFound: Boolean = false,
     val error: Boolean = false,
+    /**
+     * Whether the lyrics on screen came from LRCLIB/the cache and can still be
+     * written into the file. False once they are the file's own copy.
+     */
+    val canSaveToFile: Boolean = false,
+    val savingToFile: Boolean = false,
 )
+
+sealed interface LyricsEvent {
+    /** Ask the UI to launch a scoped-storage write-consent dialog. */
+    data class RequestConsent(val intentSender: IntentSender) : LyricsEvent
+    data object Saved : LyricsEvent
+    data object Error : LyricsEvent
+}
 
 @HiltViewModel
 class LyricsViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val connection: PlayerConnection,
     private val lyricsRepository: LyricsRepository,
     private val settingsRepository: SettingsRepository,
+    private val tagRepository: TagRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(LyricsUiState())
@@ -63,6 +86,14 @@ class LyricsViewModel @Inject constructor(
         combine(positionTicker(), _lines) { position, lines ->
             LrcParser.activeIndex(lines, position)
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), -1)
+
+    private val _events = MutableSharedFlow<LyricsEvent>(extraBufferCapacity = 1)
+    val events = _events.asSharedFlow()
+
+    private var consent: CompletableDeferred<Boolean>? = null
+
+    /** Text eligible for embedding: the LRCLIB copy, synced preferred. */
+    private var fetchedText: String? = null
 
     private var loadedMediaId: Long? = null
 
@@ -122,6 +153,10 @@ class LyricsViewModel @Inject constructor(
 
     private fun applyLyrics(lyrics: Lyrics) {
         _lines.value = lyrics.synced?.let { LrcParser.parse(it) }.orEmpty()
+        // Synced text always comes from LRCLIB (embedded lyrics are read as plain),
+        // so anything but a file-sourced plain-only result is worth saving.
+        fetchedText = lyrics.synced?.takeIf { it.isNotBlank() }
+            ?: lyrics.plain?.takeIf { it.isNotBlank() && !lyrics.plainFromFile }
         _state.update {
             it.copy(
                 loading = false,
@@ -129,8 +164,46 @@ class LyricsViewModel @Inject constructor(
                 hasSynced = _lines.value.isNotEmpty(),
                 notFound = lyrics.isEmpty && !lyrics.networkError,
                 error = lyrics.networkError,
+                canSaveToFile = fetchedText != null,
             )
         }
+    }
+
+    /** Feeds back the scoped-storage consent dialog result. */
+    fun onConsentResult(granted: Boolean) {
+        consent?.complete(granted)
+        consent = null
+    }
+
+    /**
+     * Embeds the fetched lyrics in the playing file. The synced (LRC) text wins
+     * over the plain one; after a successful write the file's own copy takes
+     * priority on the next load, so the action disappears.
+     */
+    fun saveToFile() {
+        val text = fetchedText ?: return
+        val item = connection.currentItem.value ?: return
+        val uri = item.localConfiguration?.uri ?: return
+        val path = item.mediaMetadata.extras?.getString(EXTRA_PATH).orEmpty()
+        viewModelScope.launch {
+            _state.update { it.copy(savingToFile = true) }
+            val ok = writeWithScopedConsent(
+                context = context,
+                uris = listOf(uri),
+                requestConsent = ::requestConsent,
+                write = { tagRepository.writeLyrics(uri, text) },
+            )
+            if (ok && path.isNotEmpty()) tagRepository.notifyFileChanged(path)
+            _state.update { it.copy(savingToFile = false, canSaveToFile = !ok) }
+            _events.emit(if (ok) LyricsEvent.Saved else LyricsEvent.Error)
+        }
+    }
+
+    private suspend fun requestConsent(sender: IntentSender): Boolean {
+        val deferred = CompletableDeferred<Boolean>()
+        consent = deferred
+        _events.emit(LyricsEvent.RequestConsent(sender))
+        return deferred.await()
     }
 
     fun seekToLine(index: Int) {
