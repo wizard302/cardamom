@@ -72,5 +72,6 @@ Nothing is sent anywhere except the metadata/lyrics lookups you trigger yourself
 
 ## License
 
-Cardamom Music is free, open-source software. TagLib is used under the GNU LGPL v2.1;
-because it is linked as a shared library, you may replace it with a modified version.
+Cardamom Music is free software, licensed under the **GNU General Public License v3.0**
+(see [LICENSE](LICENSE)). TagLib is used under the GNU LGPL v2.1; because it is linked as
+a shared library, you may replace it with a modified version.
