@@ -221,6 +221,20 @@ fun NowPlayingScreen(
     val repeatMode by viewModel.repeatMode.collectAsStateWithLifecycle()
     val queuePosition by viewModel.queuePosition.collectAsStateWithLifecycle()
     val isFavorite by viewModel.isCurrentFavorite.collectAsStateWithLifecycle()
+    val sleepRemainingMs by viewModel.sleepTimerRemainingMs.collectAsStateWithLifecycle()
+    val sleepAfterTrack by viewModel.sleepTimerAfterTrack.collectAsStateWithLifecycle()
+
+    var showSleepTimer by remember { mutableStateOf(false) }
+    if (showSleepTimer) {
+        SleepTimerDialog(
+            remainingMs = sleepRemainingMs,
+            afterTrack = sleepAfterTrack,
+            onStart = viewModel::startSleepTimer,
+            onStartAfterTrack = viewModel::startSleepTimerAfterTrack,
+            onCancelTimer = viewModel::cancelSleepTimer,
+            onDismiss = { showSleepTimer = false },
+        )
+    }
 
     var showQueue by remember { mutableStateOf(false) }
     if (showQueue) {
@@ -302,6 +316,26 @@ fun NowPlayingScreen(
                         expanded = showOverflow,
                         onDismissRequest = { showOverflow = false },
                     ) {
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    when {
+                                        sleepRemainingMs != null -> stringResource(
+                                            R.string.sleep_timer_menu_running,
+                                            formatDuration(sleepRemainingMs ?: 0L),
+                                        )
+                                        sleepAfterTrack -> stringResource(
+                                            R.string.sleep_timer_menu_end_of_track,
+                                        )
+                                        else -> stringResource(R.string.sleep_timer_title)
+                                    },
+                                )
+                            },
+                            onClick = {
+                                showOverflow = false
+                                showSleepTimer = true
+                            },
+                        )
                         NowPlayingActions.forEach { (action, label) ->
                             DropdownMenuItem(
                                 text = { Text(stringResource(label)) },

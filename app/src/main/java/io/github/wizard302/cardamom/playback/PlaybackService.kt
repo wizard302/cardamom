@@ -50,6 +50,8 @@ class PlaybackService : MediaSessionService() {
 
     @Inject lateinit var audioEffects: AudioEffectsController
 
+    @Inject lateinit var sleepTimer: SleepTimerController
+
     private var mediaSession: MediaSession? = null
     private var headphoneWatcher: HeadphoneWatcher? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -78,6 +80,30 @@ class PlaybackService : MediaSessionService() {
         }
     }
 
+    /**
+     * Sleep timer hooks. "End of track" fires on the next automatic transition
+     * (a repeat-one loop counts); a user-requested pause disarms the timer, so
+     * stopping by hand does not leave it silently running.
+     */
+    private val sleepTimerListener = object : Player.Listener {
+        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+            if (!sleepTimer.stopAfterTrack.value) return
+            if (reason != Player.MEDIA_ITEM_TRANSITION_REASON_AUTO &&
+                reason != Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT
+            ) {
+                return
+            }
+            sleepTimer.cancel()
+            mediaSession?.player?.pause()
+        }
+
+        override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+            if (!playWhenReady && reason == Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST) {
+                sleepTimer.cancel()
+            }
+        }
+    }
+
     private fun refreshWidget() {
         mediaSession?.player?.let { PlayerWidget.update(this, it) }
     }
@@ -98,6 +124,7 @@ class PlaybackService : MediaSessionService() {
             .setHandleAudioBecomingNoisy(false)
             .build()
         player.addListener(persistListener)
+        player.addListener(sleepTimerListener)
 
         // Pin a stable audio session id up front so the equalizer can attach even
         // before playback starts, then hand it to the effects controller.
@@ -127,6 +154,12 @@ class PlaybackService : MediaSessionService() {
         mediaSession = MediaSession.Builder(this, player)
             .setSessionActivity(sessionActivity)
             .build()
+
+        scope.launch {
+            sleepTimer.expired.collect {
+                mediaSession?.player?.pause()
+            }
+        }
 
         scope.launch { restoreQueueState(player) }
         scope.launch {

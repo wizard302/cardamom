@@ -180,6 +180,17 @@
         <item>kotlinx.serialization — Apache 2.0</item>
         <item>TagLib (io.github.kyant0:taglib) — LGPL 2.1</item>
     </string-array>
+    <string name="sleep_timer_title">Sleep timer</string>
+    <string name="sleep_timer_menu_running">Sleep timer · %1$s</string>
+    <string name="sleep_timer_menu_end_of_track">Sleep timer · end of track</string>
+    <string name="sleep_timer_remaining">Pausing in %1$s</string>
+    <string name="sleep_timer_end_of_track">End of track</string>
+    <string name="sleep_timer_end_of_track_active">Pausing at the end of this track</string>
+    <string name="sleep_timer_minutes">%1$d min</string>
+    <string name="sleep_timer_custom">Minutes</string>
+    <string name="sleep_timer_start">Start</string>
+    <string name="sleep_timer_cancel">Cancel timer</string>
+
     <string name="settings_language">Language</string>
     <string name="language_system">System default</string>
     <string name="language_en">English</string>
