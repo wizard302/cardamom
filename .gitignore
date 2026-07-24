@@ -16,3 +16,7 @@ keystore.properties
 .externalNativeBuild
 .cxx
 local.properties
+
+# Local development notes / agent instructions — kept out of the public repo.
+/CLAUDE.md
+/PLAN.md
