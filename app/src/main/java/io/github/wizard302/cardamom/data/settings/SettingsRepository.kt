@@ -16,6 +16,12 @@ import javax.inject.Singleton
 
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
 
+/** Volume leveling source: no leveling, per-track gain, or per-album gain. */
+enum class ReplayGainMode { OFF, TRACK, ALBUM }
+
+const val RG_PREAMP_MIN_DB = -15f
+const val RG_PREAMP_MAX_DB = 15f
+
 private val Context.settingsDataStore by preferencesDataStore(name = "settings")
 
 @Singleton
@@ -36,6 +42,8 @@ class SettingsRepository @Inject constructor(
     private val bassBoostKey = intPreferencesKey("eq_bass_boost")
     private val virtualizerKey = intPreferencesKey("eq_virtualizer")
     private val playbackSpeedKey = floatPreferencesKey("playback_speed")
+    private val rgModeKey = stringPreferencesKey("rg_mode")
+    private val rgPreampKey = floatPreferencesKey("rg_preamp_db")
     private val excludedFoldersKey = stringSetPreferencesKey("excluded_folders")
     private val libraryTabKey = intPreferencesKey("library_tab")
 
@@ -85,6 +93,26 @@ class SettingsRepository @Inject constructor(
 
     suspend fun setPlaybackSpeed(speed: Float) {
         context.settingsDataStore.edit { it[playbackSpeedKey] = speed }
+    }
+
+    /** Volume leveling from ReplayGain tags; off by default. */
+    val rgMode: Flow<ReplayGainMode> = context.settingsDataStore.data.map { prefs ->
+        ReplayGainMode.entries.firstOrNull { it.name == prefs[rgModeKey] } ?: ReplayGainMode.OFF
+    }
+
+    /** Extra gain applied on top of the tag value, −15..+15 dB. */
+    val rgPreampDb: Flow<Float> = context.settingsDataStore.data.map { prefs ->
+        (prefs[rgPreampKey] ?: 0f).coerceIn(RG_PREAMP_MIN_DB, RG_PREAMP_MAX_DB)
+    }
+
+    suspend fun setRgMode(mode: ReplayGainMode) {
+        context.settingsDataStore.edit { it[rgModeKey] = mode.name }
+    }
+
+    suspend fun setRgPreampDb(db: Float) {
+        context.settingsDataStore.edit {
+            it[rgPreampKey] = db.coerceIn(RG_PREAMP_MIN_DB, RG_PREAMP_MAX_DB)
+        }
     }
 
     val trackSort: Flow<TrackSort> = context.settingsDataStore.data.map { prefs ->

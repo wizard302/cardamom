@@ -21,6 +21,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Slider
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
@@ -41,8 +42,12 @@ import androidx.core.os.LocaleListCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.wizard302.cardamom.R
+import io.github.wizard302.cardamom.data.settings.RG_PREAMP_MAX_DB
+import io.github.wizard302.cardamom.data.settings.RG_PREAMP_MIN_DB
+import io.github.wizard302.cardamom.data.settings.ReplayGainMode
 import io.github.wizard302.cardamom.data.settings.ThemeMode
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 @Composable
 fun SettingsScreen(
@@ -57,6 +62,8 @@ fun SettingsScreen(
     val syncedLyrics by viewModel.syncedLyricsHighlighting.collectAsStateWithLifecycle()
     val pauseOnDisconnect by viewModel.pauseOnDisconnect.collectAsStateWithLifecycle()
     val resumeOnConnect by viewModel.resumeOnConnect.collectAsStateWithLifecycle()
+    val rgMode by viewModel.rgMode.collectAsStateWithLifecycle()
+    val rgPreampDb by viewModel.rgPreampDb.collectAsStateWithLifecycle()
     val deviceImport by viewModel.deviceImport.collectAsStateWithLifecycle()
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -155,6 +162,47 @@ fun SettingsScreen(
                     .clickable(onClick = onEqualizer)
                     .padding(horizontal = 16.dp, vertical = 16.dp),
             )
+
+            SectionTitle(stringResource(R.string.settings_volume_leveling))
+            Text(
+                text = stringResource(R.string.settings_volume_leveling_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+            )
+            Column(modifier = Modifier.selectableGroup()) {
+                ReplayGainMode.entries.forEach { mode ->
+                    RadioRow(
+                        label = stringResource(
+                            when (mode) {
+                                ReplayGainMode.OFF -> R.string.rg_mode_off
+                                ReplayGainMode.TRACK -> R.string.rg_mode_track
+                                ReplayGainMode.ALBUM -> R.string.rg_mode_album
+                            },
+                        ),
+                        selected = rgMode == mode,
+                        onSelect = { viewModel.setRgMode(mode) },
+                    )
+                }
+            }
+            if (rgMode != ReplayGainMode.OFF) {
+                // Live-updates the player while dragging; the value is a preference,
+                // not a per-frame animation, so the extra writes are cheap.
+                Text(
+                    text = stringResource(
+                        R.string.rg_preamp,
+                        String.format(Locale.US, "%+.1f", rgPreampDb),
+                    ),
+                    modifier = Modifier.padding(start = 16.dp, top = 8.dp),
+                )
+                Slider(
+                    value = rgPreampDb,
+                    onValueChange = viewModel::setRgPreampDb,
+                    valueRange = RG_PREAMP_MIN_DB..RG_PREAMP_MAX_DB,
+                    steps = 59, // 0.5 dB increments
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+            }
 
             SectionTitle(stringResource(R.string.settings_lyrics))
             SwitchRow(

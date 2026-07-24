@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.wizard302.cardamom.data.media.LibraryRepository
 import io.github.wizard302.cardamom.data.playlist.M3uIo
+import io.github.wizard302.cardamom.data.settings.ReplayGainMode
 import io.github.wizard302.cardamom.data.settings.SettingsRepository
 import io.github.wizard302.cardamom.data.settings.ThemeMode
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -48,6 +49,12 @@ class SettingsViewModel @Inject constructor(
     val resumeOnConnect: StateFlow<Boolean> = repository.resumeOnConnect
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
+    val rgMode: StateFlow<ReplayGainMode> = repository.rgMode
+        .stateIn(viewModelScope, SharingStarted.Eagerly, ReplayGainMode.OFF)
+
+    val rgPreampDb: StateFlow<Float> = repository.rgPreampDb
+        .stateIn(viewModelScope, SharingStarted.Eagerly, 0f)
+
     fun setThemeMode(mode: ThemeMode) {
         viewModelScope.launch { repository.setThemeMode(mode) }
     }
@@ -66,6 +73,14 @@ class SettingsViewModel @Inject constructor(
 
     fun setResumeOnConnect(enabled: Boolean) {
         viewModelScope.launch { repository.setResumeOnConnect(enabled) }
+    }
+
+    fun setRgMode(mode: ReplayGainMode) {
+        viewModelScope.launch { repository.setRgMode(mode) }
+    }
+
+    fun setRgPreampDb(db: Float) {
+        viewModelScope.launch { repository.setRgPreampDb(db) }
     }
 
     fun rescanLibrary() = libraryRepository.refresh()

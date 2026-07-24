@@ -151,6 +151,13 @@
     <string name="settings_playback">Воспроизведение</string>
     <string name="settings_pause_on_disconnect">Пауза при отключении наушников</string>
     <string name="settings_resume_on_connect">Продолжить при подключении наушников</string>
+    <string name="settings_volume_leveling">Выравнивание громкости</string>
+    <string name="settings_volume_leveling_hint">Использует теги ReplayGain, чтобы выровнять громкость треков. Возможно только приглушение: положительное итоговое усиление не сделает трек громче, чем он записан.</string>
+    <string name="rg_mode_off">Выключено</string>
+    <string name="rg_mode_track">По треку</string>
+    <string name="rg_mode_album">По альбому</string>
+    <string name="rg_preamp">Предусиление: %1$s дБ</string>
+
     <string name="settings_library">Медиатека</string>
     <string name="scanned_folders_title">Папки сканирования</string>
     <string name="scanned_folders_hint">Папки без флажка не попадают в медиатеку.</string>

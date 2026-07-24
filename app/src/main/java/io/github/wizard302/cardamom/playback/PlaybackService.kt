@@ -16,12 +16,16 @@ import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import io.github.wizard302.cardamom.MainActivity
 import io.github.wizard302.cardamom.data.media.MediaStoreScanner
+import io.github.wizard302.cardamom.data.settings.ReplayGainMode
 import io.github.wizard302.cardamom.data.settings.SettingsRepository
 import io.github.wizard302.cardamom.widget.PlayerWidget
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.Dispatchers
@@ -53,6 +57,8 @@ class PlaybackService : MediaSessionService() {
 
     @Inject lateinit var sleepTimer: SleepTimerController
 
+    @Inject lateinit var replayGain: ReplayGainController
+
     private var mediaSession: MediaSession? = null
     private var headphoneWatcher: HeadphoneWatcher? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -60,6 +66,9 @@ class PlaybackService : MediaSessionService() {
     // Queue edits (especially a bulk "play all") fire many timeline callbacks in
     // a burst; persisting is debounced so DataStore sees one write per burst.
     private val saveRequests = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+    /** Drives ReplayGain: the volume is recomputed whenever this changes. */
+    private val currentItem = MutableStateFlow<MediaItem?>(null)
 
     private val persistListener = object : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -70,6 +79,7 @@ class PlaybackService : MediaSessionService() {
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
             saveQueueState()
             refreshWidget()
+            currentItem.value = mediaItem
         }
 
         override fun onTimelineChanged(timeline: Timeline, reason: Int) {
@@ -166,6 +176,26 @@ class PlaybackService : MediaSessionService() {
         // start. Only the persisted value is read here — later changes arrive
         // through the MediaController.
         scope.launch { player.setPlaybackSpeed(settings.playbackSpeed.first()) }
+
+        // Volume leveling: recomputed on every track change and whenever the
+        // settings change, so switching the mode off restores full volume at once.
+        // collectLatest drops an in-flight tag read when the track moves on.
+        scope.launch {
+            combine(
+                currentItem,
+                settings.rgMode,
+                settings.rgPreampDb,
+            ) { item, mode, preamp -> Triple(item, mode, preamp) }
+                .collectLatest { (item, mode, preamp) ->
+                    val uri = item?.localConfiguration?.uri
+                    val gain = if (mode == ReplayGainMode.OFF || uri == null) {
+                        null
+                    } else {
+                        replayGain.gainFor(uri, item.mediaId)
+                    }
+                    player.volume = replayGainVolume(gain, mode, preamp)
+                }
+        }
 
         scope.launch { restoreQueueState(player) }
         scope.launch {
