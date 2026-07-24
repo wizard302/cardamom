@@ -29,6 +29,7 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material.icons.rounded.RepeatOne
 import androidx.compose.material.icons.rounded.Shuffle
+import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material3.AssistChip
@@ -221,8 +222,18 @@ fun NowPlayingScreen(
     val repeatMode by viewModel.repeatMode.collectAsStateWithLifecycle()
     val queuePosition by viewModel.queuePosition.collectAsStateWithLifecycle()
     val isFavorite by viewModel.isCurrentFavorite.collectAsStateWithLifecycle()
+    val speed by viewModel.speed.collectAsStateWithLifecycle()
     val sleepRemainingMs by viewModel.sleepTimerRemainingMs.collectAsStateWithLifecycle()
     val sleepAfterTrack by viewModel.sleepTimerAfterTrack.collectAsStateWithLifecycle()
+
+    var showSpeed by remember { mutableStateOf(false) }
+    if (showSpeed) {
+        SpeedDialog(
+            speed = speed,
+            onSpeedChange = viewModel::setSpeed,
+            onDismiss = { showSpeed = false },
+        )
+    }
 
     var showSleepTimer by remember { mutableStateOf(false) }
     if (showSleepTimer) {
@@ -487,6 +498,27 @@ fun NowPlayingScreen(
                         },
                     )
                 }
+            }
+
+            // Speed sits under the transport row: reachable, but out of the way
+            // of the controls that get used on every track.
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                horizontalArrangement = Arrangement.Center,
+            ) {
+                AssistChip(
+                    onClick = { showSpeed = true },
+                    label = { Text(formatSpeed(speed)) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Rounded.Speed,
+                            contentDescription = stringResource(R.string.speed_title),
+                            modifier = Modifier.size(18.dp),
+                        )
+                    },
+                )
             }
 
             Spacer(modifier = Modifier.weight(1f))

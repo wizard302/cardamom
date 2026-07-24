@@ -171,6 +171,8 @@
     <string name="about_licenses">Лицензии открытого ПО</string>
     <string name="about_taglib">Чтение и запись тегов выполняет TagLib под лицензией GNU LGPL v2.1. TagLib подключён как разделяемая библиотека, поэтому её можно заменить изменённой версией. Исходный код доступен на https://taglib.org.</string>
     <string name="about_metadata_sources">Метаданные предоставляют MusicBrainz, Cover Art Archive, Deezer и LRCLIB — соблюдайте их условия использования.</string>
+    <string name="speed_title">Скорость воспроизведения</string>
+
     <string name="sleep_timer_title">Таймер сна</string>
     <string name="sleep_timer_menu_running">Таймер сна · %1$s</string>
     <string name="sleep_timer_menu_end_of_track">Таймер сна · до конца трека</string>

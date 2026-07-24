@@ -23,6 +23,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -160,6 +161,11 @@ class PlaybackService : MediaSessionService() {
                 mediaSession?.player?.pause()
             }
         }
+
+        // The speed is stored once globally; the UI writes it, we apply it on
+        // start. Only the persisted value is read here — later changes arrive
+        // through the MediaController.
+        scope.launch { player.setPlaybackSpeed(settings.playbackSpeed.first()) }
 
         scope.launch { restoreQueueState(player) }
         scope.launch {

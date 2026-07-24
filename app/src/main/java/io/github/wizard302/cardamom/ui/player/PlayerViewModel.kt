@@ -3,7 +3,10 @@ package io.github.wizard302.cardamom.ui.player
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.wizard302.cardamom.data.playlist.PlaylistRepository
+import io.github.wizard302.cardamom.data.settings.SettingsRepository
 import io.github.wizard302.cardamom.playback.EXTRA_PATH
+import io.github.wizard302.cardamom.playback.MAX_SPEED
+import io.github.wizard302.cardamom.playback.MIN_SPEED
 import io.github.wizard302.cardamom.playback.PlayerConnection
 import io.github.wizard302.cardamom.playback.SleepTimerController
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -21,6 +24,7 @@ class PlayerViewModel @Inject constructor(
     private val connection: PlayerConnection,
     private val playlistRepository: PlaylistRepository,
     private val sleepTimer: SleepTimerController,
+    private val settings: SettingsRepository,
 ) : ViewModel() {
 
     init {
@@ -36,6 +40,7 @@ class PlayerViewModel @Inject constructor(
     val queue = connection.queue
     val currentIndex = connection.currentIndex
     val currentItem = connection.currentItem
+    val speed = connection.speed
 
     /** Whether the currently playing track is in Favorites. */
     val isCurrentFavorite: StateFlow<Boolean> =
@@ -43,6 +48,12 @@ class PlayerViewModel @Inject constructor(
             val mediaId = item?.mediaId?.toLongOrNull()
             mediaId != null && mediaId in favIds
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    /** Applies the speed immediately and persists it as the new global default. */
+    fun setSpeed(value: Float) {
+        connection.setSpeed(value)
+        viewModelScope.launch { settings.setPlaybackSpeed(value.coerceIn(MIN_SPEED, MAX_SPEED)) }
+    }
 
     /** Sleep timer: remaining milliseconds (null when no deadline is armed). */
     val sleepTimerRemainingMs: StateFlow<Long?> = sleepTimer.remainingMs()

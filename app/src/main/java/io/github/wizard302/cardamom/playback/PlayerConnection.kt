@@ -16,6 +16,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/** Bounds of the playback-speed slider, shared by the UI and the persisted value. */
+const val MIN_SPEED = 0.5f
+const val MAX_SPEED = 2.0f
+
 /**
  * Owns the MediaController connection to PlaybackService and mirrors the
  * player state into StateFlows the Compose UI can collect. Main-thread only
@@ -60,6 +64,10 @@ class PlayerConnection @Inject constructor(
     private val _currentIndex = MutableStateFlow(-1)
     val currentIndex: StateFlow<Int> = _currentIndex.asStateFlow()
 
+    /** Playback speed; 1.0 is normal. */
+    private val _speed = MutableStateFlow(1f)
+    val speed: StateFlow<Float> = _speed.asStateFlow()
+
     private val listener = object : Player.Listener {
         override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
             _currentMetadata.value = mediaMetadata
@@ -80,6 +88,12 @@ class PlayerConnection @Inject constructor(
 
         override fun onRepeatModeChanged(repeatMode: Int) {
             _repeatMode.value = repeatMode
+        }
+
+        override fun onPlaybackParametersChanged(
+            playbackParameters: androidx.media3.common.PlaybackParameters,
+        ) {
+            _speed.value = playbackParameters.speed
         }
 
         override fun onTimelineChanged(timeline: androidx.media3.common.Timeline, reason: Int) {
@@ -112,6 +126,7 @@ class PlayerConnection @Inject constructor(
                 _durationMs.value = c.duration.coerceAtLeast(0L)
                 _shuffleEnabled.value = c.shuffleModeEnabled
                 _repeatMode.value = c.repeatMode
+                _speed.value = c.playbackParameters.speed
                 updateQueue()
                 updatePosition()
                 _connected.value = true
@@ -183,6 +198,11 @@ class PlayerConnection @Inject constructor(
     fun seekTo(positionMs: Long) = withController { seekTo(positionMs) }
 
     fun toggleShuffle() = withController { shuffleModeEnabled = !shuffleModeEnabled }
+
+    /** Pitch is left untouched: only the tempo changes. */
+    fun setSpeed(speed: Float) = withController {
+        setPlaybackSpeed(speed.coerceIn(MIN_SPEED, MAX_SPEED))
+    }
 
     fun cycleRepeatMode() = withController {
         repeatMode = when (repeatMode) {

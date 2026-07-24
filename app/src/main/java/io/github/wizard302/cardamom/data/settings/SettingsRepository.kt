@@ -3,6 +3,7 @@ package io.github.wizard302.cardamom.data.settings
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
@@ -34,6 +35,7 @@ class SettingsRepository @Inject constructor(
     private val eqBandsKey = stringPreferencesKey("eq_bands")
     private val bassBoostKey = intPreferencesKey("eq_bass_boost")
     private val virtualizerKey = intPreferencesKey("eq_virtualizer")
+    private val playbackSpeedKey = floatPreferencesKey("playback_speed")
     private val excludedFoldersKey = stringSetPreferencesKey("excluded_folders")
     private val libraryTabKey = intPreferencesKey("library_tab")
 
@@ -71,6 +73,18 @@ class SettingsRepository @Inject constructor(
 
     suspend fun setResumeOnConnect(enabled: Boolean) {
         context.settingsDataStore.edit { it[resumeOnConnectKey] = enabled }
+    }
+
+    /**
+     * One global playback speed (1.0 = normal), applied by PlaybackService on
+     * start and updated whenever the user moves the speed slider.
+     */
+    val playbackSpeed: Flow<Float> = context.settingsDataStore.data.map { prefs ->
+        prefs[playbackSpeedKey] ?: 1f
+    }
+
+    suspend fun setPlaybackSpeed(speed: Float) {
+        context.settingsDataStore.edit { it[playbackSpeedKey] = speed }
     }
 
     val trackSort: Flow<TrackSort> = context.settingsDataStore.data.map { prefs ->

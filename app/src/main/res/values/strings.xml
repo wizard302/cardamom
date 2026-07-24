@@ -180,6 +180,8 @@
         <item>kotlinx.serialization — Apache 2.0</item>
         <item>TagLib (io.github.kyant0:taglib) — LGPL 2.1</item>
     </string-array>
+    <string name="speed_title">Playback speed</string>
+
     <string name="sleep_timer_title">Sleep timer</string>
     <string name="sleep_timer_menu_running">Sleep timer · %1$s</string>
     <string name="sleep_timer_menu_end_of_track">Sleep timer · end of track</string>
