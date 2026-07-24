@@ -6,6 +6,7 @@ import android.provider.DocumentsContract
 import io.github.wizard302.cardamom.data.media.LibraryRepository
 import io.github.wizard302.cardamom.data.media.Track
 import io.github.wizard302.cardamom.util.documentUriToFilePath
+import io.github.wizard302.cardamom.util.queryDisplayName
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -28,6 +29,9 @@ class M3uIo @Inject constructor(
     /** Aggregate outcome of importing every playlist file found under a folder. */
     data class FolderImportResult(val playlists: Int, val tracks: Int)
 
+    /** Aggregate outcome of exporting every playlist into one folder. */
+    data class ExportAllResult(val playlists: Int, val skippedEmpty: Int)
+
     suspend fun export(uri: Uri, entries: List<M3uEntry>) = withContext(Dispatchers.IO) {
         // Relative paths whenever the playlist's real location is resolvable —
         // that keeps exported playlists portable across devices.
@@ -38,6 +42,81 @@ class M3uIo @Inject constructor(
             output.write(text.toByteArray(Charsets.UTF_8))
         }
     }
+
+    /**
+     * Writes every playlist as `<name>.m3u8` into the SAF folder [treeUri]
+     * (from `ACTION_OPEN_DOCUMENT_TREE`). Existing documents with the same
+     * display name are reused and truncated: `createDocument` would otherwise
+     * turn a second export into "name (1).m3u8". Empty playlists are skipped.
+     */
+    suspend fun exportAll(treeUri: Uri): ExportAllResult = withContext(Dispatchers.IO) {
+        val treeDocId = DocumentsContract.getTreeDocumentId(treeUri)
+        val dirUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, treeDocId)
+        val existing = childDocumentsByName(treeUri, treeDocId).toMutableMap()
+
+        var exported = 0
+        var skippedEmpty = 0
+        for (playlist in playlistRepository.allPlaylists()) {
+            val tracks = playlistRepository.getPlaylistTracks(playlist.id)
+            if (tracks.isEmpty()) {
+                skippedEmpty++
+                continue
+            }
+            val fileName = sanitizeFileName(playlist.name) + ".m3u8"
+            val target = existing[fileName]
+                ?: createPlaylistDocument(dirUri, fileName)?.also { existing[fileName] = it }
+                ?: continue
+            export(
+                target,
+                tracks.map { M3uEntry(it.path, it.durationMs / 1000, it.artist, it.title) },
+            )
+            exported++
+        }
+        ExportAllResult(exported, skippedEmpty)
+    }
+
+    /** Display name → document uri for the direct children of a tree folder. */
+    private fun childDocumentsByName(treeUri: Uri, parentDocId: String): Map<String, Uri> {
+        val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, parentDocId)
+        val result = mutableMapOf<String, Uri>()
+        context.contentResolver.query(
+            childrenUri,
+            arrayOf(
+                DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+            ),
+            null,
+            null,
+            null,
+        )?.use { cursor ->
+            val idCol = cursor.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_DOCUMENT_ID)
+            val nameCol =
+                cursor.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
+            while (cursor.moveToNext()) {
+                val name = cursor.getString(nameCol) ?: continue
+                result[name] = DocumentsContract.buildDocumentUriUsingTree(
+                    treeUri,
+                    cursor.getString(idCol),
+                )
+            }
+        }
+        return result
+    }
+
+    /**
+     * Creates `fileName` in [dirUri]. Providers derive the extension from the MIME
+     * type and may append their own (".m3u8.m3u"), which would break the reuse
+     * lookup on the next export — so the result is renamed back when it differs.
+     */
+    private fun createPlaylistDocument(dirUri: Uri, fileName: String): Uri? = runCatching {
+        val resolver = context.contentResolver
+        val created = DocumentsContract.createDocument(resolver, dirUri, M3U_MIME_TYPE, fileName)
+        when {
+            created == null -> null
+            context.queryDisplayName(created) == fileName -> created
+            else -> DocumentsContract.renameDocument(resolver, created, fileName) ?: created
+        }
+    }.getOrNull()
 
     /** Parses the M3U at [uri], matches against the library, and stores a new playlist. */
     suspend fun import(uri: Uri, playlistName: String): ImportResult? = withContext(Dispatchers.IO) {

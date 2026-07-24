@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FileDownload
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.PlaylistPlay
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -26,8 +27,11 @@ import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,6 +60,7 @@ fun PlaylistsTab(
     val playlists by viewModel.playlists.collectAsStateWithLifecycle()
     val favoritesCount by viewModel.favoritesCount.collectAsStateWithLifecycle()
     val importResult by viewModel.importResult.collectAsStateWithLifecycle()
+    val exportAllResult by viewModel.exportAllResult.collectAsStateWithLifecycle()
     val context = LocalContext.current
     // Read through stringResource so a locale change re-composes the fallback name.
     val importedFallbackName = stringResource(R.string.playlist_imported)
@@ -71,6 +76,21 @@ fun PlaylistsTab(
             val name = context.queryDisplayName(uri)?.substringBeforeLast('.')
                 ?: importedFallbackName
             viewModel.import(uri, name)
+        }
+    }
+
+    val exportAllLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree(),
+    ) { uri -> if (uri != null) viewModel.exportAll(uri) }
+
+    val snackbarHostState = remember { SnackbarHostState() }
+    val exportAllMessage = exportAllResult?.let {
+        pluralStringResource(R.plurals.playlist_export_all_done, it.playlists, it.playlists)
+    }
+    LaunchedEffect(exportAllMessage) {
+        if (exportAllMessage != null) {
+            snackbarHostState.showSnackbar(exportAllMessage)
+            viewModel.clearExportAllResult()
         }
     }
 
@@ -96,6 +116,29 @@ fun PlaylistsTab(
                             imageVector = Icons.Rounded.FileDownload,
                             contentDescription = stringResource(R.string.playlist_import),
                         )
+                    }
+                    var showTabMenu by remember { mutableStateOf(false) }
+                    Box {
+                        IconButton(onClick = { showTabMenu = true }) {
+                            Icon(
+                                imageVector = Icons.Rounded.MoreVert,
+                                contentDescription = stringResource(R.string.action_more),
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showTabMenu,
+                            onDismissRequest = { showTabMenu = false },
+                        ) {
+                            DropdownMenuItem(
+                                text = {
+                                    Text(stringResource(R.string.playlist_export_all))
+                                },
+                                onClick = {
+                                    showTabMenu = false
+                                    exportAllLauncher.launch(null)
+                                },
+                            )
+                        }
                     }
                 }
             }
@@ -129,6 +172,11 @@ fun PlaylistsTab(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(16.dp),
+        )
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter),
         )
     }
 

@@ -30,6 +30,9 @@ interface PlaylistDao {
     @Query("SELECT name FROM playlists")
     suspend fun allNames(): List<String>
 
+    @Query("SELECT * FROM playlists ORDER BY name COLLATE NOCASE ASC")
+    suspend fun allPlaylists(): List<PlaylistEntity>
+
     @Query("SELECT * FROM playlists WHERE id = :playlistId")
     fun observePlaylist(playlistId: Long): Flow<PlaylistEntity?>
 

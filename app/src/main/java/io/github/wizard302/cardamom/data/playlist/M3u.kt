@@ -18,6 +18,20 @@ data class ParsedM3uEntry(
     val title: String?,
 )
 
+/** MIME type used when creating playlist documents through SAF. */
+const val M3U_MIME_TYPE = "audio/x-mpegurl"
+
+/**
+ * Makes a playlist name usable as a file name: characters FAT and the SAF
+ * providers reject are replaced with `_`, and the result never ends up empty.
+ */
+fun sanitizeFileName(name: String): String {
+    val cleaned = name.map { c ->
+        if (c in "/\\:*?\"<>|" || c.code < 0x20) '_' else c
+    }.joinToString("").trim().trimEnd('.')
+    return cleaned.ifEmpty { "playlist" }
+}
+
 object M3uWriter {
 
     /**

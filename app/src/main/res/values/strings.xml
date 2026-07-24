@@ -87,6 +87,11 @@
     <string name="playlist_empty">This playlist is empty. Add tracks from any track menu.</string>
     <string name="playlist_import">Import playlist</string>
     <string name="playlist_export">Export playlist</string>
+    <string name="playlist_export_all">Export all…</string>
+    <plurals name="playlist_export_all_done">
+        <item quantity="one">Exported %d playlist</item>
+        <item quantity="other">Exported %d playlists</item>
+    </plurals>
     <string name="playlist_imported">Imported playlist</string>
     <string name="import_report_title">Import complete</string>
     <plurals name="import_unresolved">

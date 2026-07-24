@@ -27,6 +27,9 @@ class PlaylistViewModel @Inject constructor(
     private val _importResult = MutableStateFlow<M3uIo.ImportResult?>(null)
     val importResult: StateFlow<M3uIo.ImportResult?> = _importResult.asStateFlow()
 
+    private val _exportAllResult = MutableStateFlow<M3uIo.ExportAllResult?>(null)
+    val exportAllResult: StateFlow<M3uIo.ExportAllResult?> = _exportAllResult.asStateFlow()
+
     val playlists: StateFlow<List<PlaylistWithCount>> = repository.playlists
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
@@ -63,5 +66,16 @@ class PlaylistViewModel @Inject constructor(
 
     fun clearImportResult() {
         _importResult.value = null
+    }
+
+    /** Exports every playlist into the SAF folder the user picked. */
+    fun exportAll(treeUri: Uri) {
+        viewModelScope.launch {
+            _exportAllResult.value = m3uIo.exportAll(treeUri)
+        }
+    }
+
+    fun clearExportAllResult() {
+        _exportAllResult.value = null
     }
 }

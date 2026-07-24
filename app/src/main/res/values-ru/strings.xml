@@ -85,6 +85,13 @@
     <string name="playlist_empty">Плейлист пуст. Добавляйте треки из меню трека.</string>
     <string name="playlist_import">Импорт плейлиста</string>
     <string name="playlist_export">Экспорт плейлиста</string>
+    <string name="playlist_export_all">Экспортировать все…</string>
+    <plurals name="playlist_export_all_done">
+        <item quantity="one">Экспортирован %d плейлист</item>
+        <item quantity="few">Экспортировано %d плейлиста</item>
+        <item quantity="many">Экспортировано %d плейлистов</item>
+        <item quantity="other">Экспортировано %d плейлиста</item>
+    </plurals>
     <string name="playlist_imported">Импортированный плейлист</string>
     <string name="import_report_title">Импорт завершён</string>
     <plurals name="import_unresolved">

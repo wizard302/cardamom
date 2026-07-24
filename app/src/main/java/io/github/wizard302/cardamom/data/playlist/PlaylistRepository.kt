@@ -36,6 +36,9 @@ class PlaylistRepository @Inject constructor(
     /** Existing playlist names, used to skip duplicates on bulk import. */
     suspend fun existingNames(): Set<String> = playlistDao.allNames().toSet()
 
+    /** Snapshot of every playlist, name-ordered — used by "export all". */
+    suspend fun allPlaylists(): List<PlaylistEntity> = playlistDao.allPlaylists()
+
     suspend fun createPlaylist(name: String): Long =
         playlistDao.insertPlaylist(
             PlaylistEntity(name = name.trim(), createdAt = System.currentTimeMillis()),
