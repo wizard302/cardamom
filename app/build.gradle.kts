@@ -44,6 +44,11 @@ android {
                 storePassword = signingStorePassword
                 keyAlias = signingKeyAlias
                 keyPassword = signingKeyPassword
+                // v2 is what minSdk 26 needs; v3 additionally allows key
+                // rotation later, v4 enables incremental install (adb install
+                // --incremental) by writing an .apk.idsig alongside the APK.
+                enableV3Signing = true
+                enableV4Signing = true
             }
         }
     }
