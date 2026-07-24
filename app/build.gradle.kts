@@ -1,3 +1,5 @@
+import java.io.File
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -5,6 +7,23 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
 }
+
+// Release signing credentials live outside the project — in the user-global
+// ~/.gradle/gradle.properties, never in the repo:
+//   cardamom.signing.storeFile / .storePassword / .keyAlias / .keyPassword
+// When they are absent — other machines, CI — release builds fall back to debug
+// signing so the build still works.
+val signingStoreFile = (findProperty("cardamom.signing.storeFile") as String?)
+    ?.trim()
+    ?.replaceFirst(Regex("^~"), System.getProperty("user.home"))
+    ?.let(::File)
+    ?.takeIf { it.isFile }
+val signingStorePassword = (findProperty("cardamom.signing.storePassword") as String?)?.takeIf { it.isNotBlank() }
+val signingKeyAlias = (findProperty("cardamom.signing.keyAlias") as String?)?.takeIf { it.isNotBlank() }
+val signingKeyPassword = (findProperty("cardamom.signing.keyPassword") as String?)?.takeIf { it.isNotBlank() }
+// All four must be present — a half-configured keystore would fail mid-build.
+val hasReleaseSigning =
+    signingStoreFile != null && signingStorePassword != null && signingKeyAlias != null && signingKeyPassword != null
 
 android {
     namespace = "io.github.wizard302.cardamom"
@@ -18,13 +37,29 @@ android {
         versionName = "0.1.0"
     }
 
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = signingStoreFile
+                storePassword = signingStorePassword
+                keyAlias = signingKeyAlias
+                keyPassword = signingKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            // No release keystore yet; debug signing lets us install release builds locally.
-            signingConfig = signingConfigs.getByName("debug")
+            // Sign with the real release key when its Gradle properties are set;
+            // otherwise fall back to debug signing so local/CI builds still work.
+            signingConfig = if (hasReleaseSigning) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
     }
     compileOptions {
