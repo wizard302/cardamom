@@ -1,14 +1,17 @@
 package io.github.wizard302.cardamom.data.lyrics
 
 import android.net.Uri
+import android.util.Log
 import io.github.wizard302.cardamom.data.db.LyricsDao
 import io.github.wizard302.cardamom.data.db.LyricsEntity
 import io.github.wizard302.cardamom.data.remote.LrcLibApi
+import io.github.wizard302.cardamom.data.remote.LrcLibResponse
 import io.github.wizard302.cardamom.data.tags.TagRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.abs
 
 /** Resolved lyrics for a track. Either field may be null. */
 data class Lyrics(
@@ -63,14 +66,18 @@ class LyricsRepository @Inject constructor(
         )
     }
 
-    /** Forces a fresh LRCLIB lookup (bypasses the cache) for manual re-search. */
+    /**
+     * Forces a fresh LRCLIB lookup (bypasses the cache) for manual re-search.
+     * Goes through the fuzzy search endpoint: the exact one also has to match
+     * the album and the track length, which an edited query rarely does.
+     */
     suspend fun refetch(
         artist: String,
         title: String,
         album: String,
         durationMs: Long,
     ): Lyrics = withContext(Dispatchers.IO) {
-        val result = fetchAndCache(artist, title, album, (durationMs / 1000).toInt())
+        val result = searchAndCache(artist, title, (durationMs / 1000).toInt())
         Lyrics(
             plain = result.entity?.plainLyrics,
             synced = result.entity?.syncedLyrics,
@@ -91,15 +98,60 @@ class LyricsRepository @Inject constructor(
         album: String,
         durationSec: Int,
     ): FetchResult {
+        // LRCLIB rejects a duration outside 1..3600 with HTTP 400, and the
+        // player reports none until the track is prepared. Search by name
+        // instead of turning that into a bogus "check your connection".
+        if (durationSec !in 1..MAX_DURATION_SEC) {
+            return searchAndCache(artist, title, durationSec)
+        }
+
         val response = runCatching {
             lrcLibApi.get(artist, title, album, durationSec)
-        }.getOrElse { return FetchResult(null, networkError = true) }
+        }.getOrElse { return failure("lookup", it) }
 
         if (!response.isSuccessful && response.code() != HTTP_NOT_FOUND) {
-            return FetchResult(null, networkError = true)
+            return failure("lookup", response.code())
         }
         val body = response.body().takeIf { response.isSuccessful }
+        return cache(artist, title, durationSec, body)
+    }
 
+    /** Fuzzy lookup by artist and title; keeps the candidate closest to the track. */
+    private suspend fun searchAndCache(
+        artist: String,
+        title: String,
+        durationSec: Int,
+    ): FetchResult {
+        val response = runCatching {
+            lrcLibApi.search(artist, title)
+        }.getOrElse { return failure("search", it) }
+
+        if (!response.isSuccessful) {
+            return failure("search", response.code())
+        }
+        return cache(artist, title, durationSec, response.body().orEmpty().bestMatch(durationSec))
+    }
+
+    /**
+     * Prefers a candidate with synced lyrics, then the one whose length is
+     * closest to the track being played. Entries without any text are useless
+     * (LRCLIB lists instrumentals too), so they are dropped first.
+     */
+    private fun List<LrcLibResponse>.bestMatch(durationSec: Int): LrcLibResponse? =
+        filterNot { it.plainLyrics.isNullOrBlank() && it.syncedLyrics.isNullOrBlank() }
+            .minWithOrNull(
+                compareBy(
+                    { it.syncedLyrics.isNullOrBlank() },
+                    { abs((it.duration?.toInt() ?: 0) - durationSec) },
+                ),
+            )
+
+    private suspend fun cache(
+        artist: String,
+        title: String,
+        durationSec: Int,
+        body: LrcLibResponse?,
+    ): FetchResult {
         val entity = LyricsEntity(
             artist = artist,
             title = title,
@@ -112,7 +164,21 @@ class LyricsRepository @Inject constructor(
         runCatching { lyricsDao.put(entity) }
         return FetchResult(entity, networkError = false)
     }
+
+    // The panel can only say "check your connection", so leave the real reason
+    // in logcat — an HTTP status here means the request did reach LRCLIB.
+    private fun failure(what: String, cause: Throwable): FetchResult {
+        Log.w(TAG, "Lyrics $what failed", cause)
+        return FetchResult(null, networkError = true)
+    }
+
+    private fun failure(what: String, httpCode: Int): FetchResult {
+        Log.w(TAG, "Lyrics $what failed: HTTP $httpCode")
+        return FetchResult(null, networkError = true)
+    }
 }
 
+private const val TAG = "Cardamom"
 private const val HTTP_NOT_FOUND = 404
+private const val MAX_DURATION_SEC = 3600
 private const val NEGATIVE_CACHE_TTL_MS = 14L * 24 * 60 * 60 * 1000

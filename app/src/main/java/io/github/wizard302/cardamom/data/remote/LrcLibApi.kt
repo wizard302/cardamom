@@ -17,10 +17,25 @@ interface LrcLibApi {
         @Query("album_name") album: String,
         @Query("duration") duration: Int,
     ): Response<LrcLibResponse>
+
+    /**
+     * Fuzzy lookup: matches on artist and title alone and returns every
+     * candidate. Unlike [get] it does not demand a matching album or a
+     * duration within a couple of seconds, which is what a manual re-search
+     * needs — the user is editing the query precisely because the exact
+     * lookup missed.
+     */
+    @GET("api/search")
+    suspend fun search(
+        @Query("artist_name") artist: String,
+        @Query("track_name") track: String,
+    ): Response<List<LrcLibResponse>>
 }
 
 @Serializable
 data class LrcLibResponse(
+    /** Track length in seconds; used to pick the closest search candidate. */
+    val duration: Double? = null,
     val plainLyrics: String? = null,
     val syncedLyrics: String? = null,
 )
