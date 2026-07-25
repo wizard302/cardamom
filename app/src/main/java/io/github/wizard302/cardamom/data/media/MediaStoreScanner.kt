@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Build
 import android.provider.MediaStore
 import dagger.hilt.android.qualifiers.ApplicationContext
+import io.github.wizard302.cardamom.util.repairMojibake
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -60,10 +61,10 @@ class MediaStoreScanner @Inject constructor(
                 while (cursor.moveToNext()) {
                     tracks += Track(
                         id = cursor.getLong(idCol),
-                        title = cursor.getString(titleCol) ?: "",
-                        artist = cursor.getString(artistCol) ?: "",
+                        title = cursor.getString(titleCol)?.repairMojibake() ?: "",
+                        artist = cursor.getString(artistCol)?.repairMojibake() ?: "",
                         artistId = cursor.getLong(artistIdCol),
-                        album = cursor.getString(albumCol) ?: "",
+                        album = cursor.getString(albumCol)?.repairMojibake() ?: "",
                         albumId = cursor.getLong(albumIdCol),
                         durationMs = cursor.getLong(durationCol),
                         trackNumber = cursor.getInt(trackCol),

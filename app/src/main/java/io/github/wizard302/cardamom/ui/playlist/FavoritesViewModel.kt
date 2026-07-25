@@ -8,6 +8,7 @@ import io.github.wizard302.cardamom.data.playlist.M3uEntry
 import io.github.wizard302.cardamom.data.playlist.M3uIo
 import io.github.wizard302.cardamom.data.playlist.PlaylistRepository
 import io.github.wizard302.cardamom.playback.PlayerConnection
+import io.github.wizard302.cardamom.util.repairMojibake
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -33,9 +34,10 @@ class FavoritesViewModel @Inject constructor(
                 ResolvedRow(
                     key = f.mediaId,
                     mediaId = f.mediaId,
-                    title = f.title,
-                    artist = f.artist,
-                    album = f.album,
+                    // Same as playlists: prefer the live library copy of the tags.
+                    title = track?.title ?: f.title.repairMojibake(),
+                    artist = track?.artist ?: f.artist.repairMojibake(),
+                    album = track?.album ?: f.album.repairMojibake(),
                     durationMs = f.durationMs,
                     path = f.path,
                     albumArtUri = track?.albumArtUri,

@@ -10,6 +10,7 @@ import io.github.wizard302.cardamom.data.playlist.M3uEntry
 import io.github.wizard302.cardamom.data.playlist.M3uIo
 import io.github.wizard302.cardamom.data.playlist.PlaylistRepository
 import io.github.wizard302.cardamom.playback.PlayerConnection
+import io.github.wizard302.cardamom.util.repairMojibake
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -45,9 +46,11 @@ class PlaylistDetailViewModel @Inject constructor(
                 ResolvedRow(
                     key = e.id,
                     mediaId = e.mediaId,
-                    title = e.title,
-                    artist = e.artist,
-                    album = e.album,
+                    // Rows cached before a tag edit (or scanned with broken
+                    // encoding) go stale; the library copy wins when resolved.
+                    title = track?.title ?: e.title.repairMojibake(),
+                    artist = track?.artist ?: e.artist.repairMojibake(),
+                    album = track?.album ?: e.album.repairMojibake(),
                     durationMs = e.durationMs,
                     path = e.path,
                     albumArtUri = track?.albumArtUri,
