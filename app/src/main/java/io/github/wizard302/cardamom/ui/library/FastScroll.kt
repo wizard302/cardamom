@@ -70,6 +70,7 @@ private fun BoxScope.FastScrollRail(
 
     val thumbHeight = 56.dp
     val railWidth = 28.dp
+    val bubbleSize = 64.dp
 
     BoxWithConstraints(
         modifier = Modifier
@@ -138,16 +139,18 @@ private fun BoxScope.FastScrollRail(
                 modifier = Modifier
                     .offset {
                         IntOffset(
-                            with(density) { (-56).dp.roundToPx() },
-                            (fraction * trackPx).roundToInt(),
+                            with(density) { (-72).dp.roundToPx() },
+                            // Centre the bubble on the thumb rather than aligning tops.
+                            (fraction * trackPx).roundToInt() +
+                                with(density) { ((thumbHeight - bubbleSize) / 2).roundToPx() },
                         )
                     }
-                    .size(48.dp),
+                    .size(bubbleSize),
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Text(
                         text = labelForIndex(targetIndex),
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.headlineSmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                     )
                 }
