@@ -3,16 +3,15 @@ package io.github.wizard302.cardamom.ui.library
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.BoxWithConstraintsScope
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -36,6 +35,10 @@ import kotlin.math.roundToInt
 
 private const val MIN_ITEMS_FOR_SCROLLER = 50
 
+private val THUMB_WIDTH = 5.dp
+private val THUMB_END_PADDING = 4.dp
+private val BUBBLE_GAP = 6.dp
+
 /**
  * Wraps a LazyColumn with a draggable fast-scroll thumb on the right edge.
  * While dragging, a bubble shows [labelForIndex] (usually the first letter)
@@ -49,7 +52,9 @@ fun FastScroll(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
-    Box(modifier = modifier) {
+    // BoxWithConstraints spans the whole list, not just the rail: the label
+    // bubble is wider than the rail and needs room to sit next to it.
+    BoxWithConstraints(modifier = modifier) {
         content()
         if (itemCount >= MIN_ITEMS_FOR_SCROLLER) {
             FastScrollRail(listState, itemCount, labelForIndex)
@@ -58,7 +63,7 @@ fun FastScroll(
 }
 
 @Composable
-private fun BoxScope.FastScrollRail(
+private fun BoxWithConstraintsScope.FastScrollRail(
     listState: LazyListState,
     itemCount: Int,
     labelForIndex: (Int) -> String,
@@ -70,95 +75,96 @@ private fun BoxScope.FastScrollRail(
 
     val thumbHeight = 56.dp
     val railWidth = 28.dp
-    val bubbleSize = 72.dp
+    val bubbleSize = 60.dp
 
-    BoxWithConstraints(
+    val trackPx = with(density) { (maxHeight - thumbHeight).toPx() }.coerceAtLeast(1f)
+
+    val listFraction by remember(itemCount) {
+        derivedStateOf {
+            val lastIndex = (itemCount - 1).coerceAtLeast(1)
+            listState.firstVisibleItemIndex.toFloat() / lastIndex
+        }
+    }
+    val fraction = (if (dragging) dragFraction else listFraction).coerceIn(0f, 1f)
+    val targetIndex = (fraction * (itemCount - 1)).roundToInt().coerceIn(0, itemCount - 1)
+
+    Box(
         modifier = Modifier
             .align(Alignment.CenterEnd)
             .fillMaxHeight()
-            .width(railWidth),
+            .width(railWidth)
+            .pointerInput(itemCount) {
+                detectVerticalDragGestures(
+                    onDragStart = { offset ->
+                        dragging = true
+                        dragFraction = (offset.y / trackPx).coerceIn(0f, 1f)
+                    },
+                    onDragEnd = { dragging = false },
+                    onDragCancel = { dragging = false },
+                    onVerticalDrag = { change, _ ->
+                        change.consume()
+                        dragFraction = (change.position.y / trackPx).coerceIn(0f, 1f)
+                        val index = (dragFraction * (itemCount - 1))
+                            .roundToInt()
+                            .coerceIn(0, itemCount - 1)
+                        scope.launch { listState.scrollToItem(index) }
+                    },
+                )
+            },
     ) {
-        val trackPx = with(density) { (maxHeight - thumbHeight).toPx() }.coerceAtLeast(1f)
-
-        val listFraction by remember(itemCount) {
-            derivedStateOf {
-                val lastIndex = (itemCount - 1).coerceAtLeast(1)
-                listState.firstVisibleItemIndex.toFloat() / lastIndex
-            }
-        }
-        val fraction = (if (dragging) dragFraction else listFraction).coerceIn(0f, 1f)
-        val targetIndex = (fraction * (itemCount - 1)).roundToInt().coerceIn(0, itemCount - 1)
-
+        // Thumb
         Box(
             modifier = Modifier
-                .fillMaxHeight()
-                .width(railWidth)
-                .pointerInput(itemCount) {
-                    detectVerticalDragGestures(
-                        onDragStart = { offset ->
-                            dragging = true
-                            dragFraction = (offset.y / trackPx).coerceIn(0f, 1f)
-                        },
-                        onDragEnd = { dragging = false },
-                        onDragCancel = { dragging = false },
-                        onVerticalDrag = { change, _ ->
-                            change.consume()
-                            dragFraction = (change.position.y / trackPx).coerceIn(0f, 1f)
-                            val index = (dragFraction * (itemCount - 1))
-                                .roundToInt()
-                                .coerceIn(0, itemCount - 1)
-                            scope.launch { listState.scrollToItem(index) }
-                        },
-                    )
-                },
-        ) {
-            // Thumb
-            Box(
-                modifier = Modifier
-                    .offset { IntOffset(0, (fraction * trackPx).roundToInt()) }
-                    .align(Alignment.TopEnd)
-                    .padding(end = 4.dp)
-                    .width(5.dp)
-                    .height(thumbHeight)
-                    .background(
-                        color = if (dragging) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                        },
-                        shape = RoundedCornerShape(3.dp),
-                    ),
-            )
-        }
+                .offset { IntOffset(0, (fraction * trackPx).roundToInt()) }
+                .align(Alignment.TopEnd)
+                .padding(end = THUMB_END_PADDING)
+                .width(THUMB_WIDTH)
+                .height(thumbHeight)
+                .background(
+                    color = if (dragging) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                    },
+                    shape = RoundedCornerShape(3.dp),
+                ),
+        )
+    }
 
-        if (dragging) {
-            Surface(
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.primaryContainer,
-                tonalElevation = 4.dp,
-                modifier = Modifier
-                    // Anchored to the rail's right edge and nudged just clear of
-                    // the thumb, so the bubble sits close to the screen edge.
-                    .align(Alignment.TopEnd)
-                    .offset {
-                        IntOffset(
-                            with(density) { (-16).dp.roundToPx() },
-                            // Centre the bubble on the thumb rather than aligning tops.
-                            (fraction * trackPx).roundToInt() +
-                                with(density) { ((thumbHeight - bubbleSize) / 2).roundToPx() },
-                        )
-                    }
-                    // requiredSize, not size: the rail is only railWidth wide and
-                    // would otherwise squash the circle into a narrow pill.
-                    .requiredSize(bubbleSize),
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        text = labelForIndex(targetIndex),
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+    if (dragging) {
+        // The teardrop's sharp corner points at the thumb, so the bubble
+        // hangs above-left of it and never covers it.
+        val bubbleTopPx = with(density) {
+            val tipToTop = bubbleSize.toPx() - (thumbHeight / 2).toPx()
+            (fraction * trackPx - tipToTop)
+                .coerceIn(0f, (maxHeight - bubbleSize).toPx().coerceAtLeast(0f))
+        }
+        Surface(
+            shape = RoundedCornerShape(
+                topStartPercent = 50,
+                topEndPercent = 50,
+                bottomEndPercent = 0,
+                bottomStartPercent = 50,
+            ),
+            color = MaterialTheme.colorScheme.primaryContainer,
+            tonalElevation = 4.dp,
+            modifier = Modifier
+                // Sits just left of the thumb, tip pointing at it.
+                .align(Alignment.TopEnd)
+                .offset {
+                    IntOffset(
+                        with(density) { -(THUMB_END_PADDING + THUMB_WIDTH + BUBBLE_GAP).roundToPx() },
+                        bubbleTopPx.roundToInt(),
                     )
                 }
+                .size(bubbleSize),
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Text(
+                    text = labelForIndex(targetIndex),
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
             }
         }
     }
