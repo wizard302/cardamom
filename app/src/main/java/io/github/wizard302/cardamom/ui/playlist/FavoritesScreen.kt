@@ -33,12 +33,15 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.wizard302.cardamom.R
+import io.github.wizard302.cardamom.data.media.Track
 import io.github.wizard302.cardamom.ui.library.CenteredMessage
+import io.github.wizard302.cardamom.ui.library.TrackMenuAction
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FavoritesScreen(
     onBack: () -> Unit,
+    onTrackMenuAction: (TrackMenuAction, Track) -> Unit,
     viewModel: FavoritesViewModel = hiltViewModel(),
 ) {
     val rows by viewModel.rows.collectAsStateWithLifecycle()
@@ -123,7 +126,13 @@ fun FavoritesScreen(
                     },
                     modifier = Modifier.animateItem(),
                 ) {
-                    ResolvedRowItem(row = row, onClick = { viewModel.play(index) })
+                    ResolvedRowWithMenu(
+                        row = row,
+                        onClick = { viewModel.play(index) },
+                        onMenuAction = onTrackMenuAction,
+                        removeLabel = stringResource(R.string.menu_remove_from_favorites),
+                        onRemove = { viewModel.remove(row.mediaId) },
+                    )
                 }
             }
         }

@@ -46,11 +46,14 @@ import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.wizard302.cardamom.R
+import io.github.wizard302.cardamom.data.media.Track
+import io.github.wizard302.cardamom.ui.library.TrackMenuAction
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlaylistDetailScreen(
     onBack: () -> Unit,
+    onTrackMenuAction: (TrackMenuAction, Track) -> Unit,
     viewModel: PlaylistDetailViewModel = hiltViewModel(),
 ) {
     val playlist by viewModel.playlist.collectAsStateWithLifecycle()
@@ -173,12 +176,15 @@ fun PlaylistDetailScreen(
                         .then(if (isDragged) Modifier else Modifier.animateItem())
                         .graphicsLayer { translationY = if (isDragged) dragOffset else 0f },
                 ) {
-                    ResolvedRowItem(
+                    ResolvedRowWithMenu(
                         row = row,
                         onClick = {
                             val pos = rows.indexOfFirst { it.key == row.key }
                             if (pos >= 0) viewModel.play(pos)
                         },
+                        onMenuAction = onTrackMenuAction,
+                        removeLabel = stringResource(R.string.menu_remove_from_playlist),
+                        onRemove = { viewModel.removeTrack(row.key) },
                         dragHandle = Modifier.pointerInput(row.key) {
                             var from = -1
                             detectDragGestures(

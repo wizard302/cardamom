@@ -240,10 +240,16 @@ private fun MainNavigation(
                         route = "playlist/{playlistId}",
                         arguments = listOf(navArgument("playlistId") { type = NavType.LongType }),
                     ) {
-                        PlaylistDetailScreen(onBack = { navController.popBackStack() })
+                        PlaylistDetailScreen(
+                            onBack = { navController.popBackStack() },
+                            onTrackMenuAction = ::onTrackMenuAction,
+                        )
                     }
                     composable("favorites") {
-                        FavoritesScreen(onBack = { navController.popBackStack() })
+                        FavoritesScreen(
+                            onBack = { navController.popBackStack() },
+                            onTrackMenuAction = ::onTrackMenuAction,
+                        )
                     }
                     composable(
                         route = "tagEditor/{trackId}",

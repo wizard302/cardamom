@@ -53,6 +53,8 @@
     <string name="menu_edit_tags">Edit tags</string>
     <string name="menu_fetch_metadata">Get metadata…</string>
     <string name="menu_details">Details</string>
+    <string name="menu_remove_from_playlist">Remove from playlist</string>
+    <string name="menu_remove_from_favorites">Remove from favorites</string>
 
     <string name="details_title">Title</string>
     <string name="details_artist">Artist</string>

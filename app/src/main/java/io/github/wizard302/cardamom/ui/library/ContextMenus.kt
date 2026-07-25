@@ -1,6 +1,7 @@
 package io.github.wizard302.cardamom.ui.library
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
@@ -45,7 +46,11 @@ fun Modifier.reportPressPosition(onPosition: (Offset) -> Unit): Modifier =
         }
     }
 
-/** Context menu shown on long-press of a track row. */
+/**
+ * Context menu shown on long-press of a track row. [extraItems] is appended
+ * below the standard entries for screen-specific actions (e.g. removing the
+ * track from the playlist being viewed).
+ */
 @Composable
 fun TrackContextMenu(
     expanded: Boolean,
@@ -53,6 +58,7 @@ fun TrackContextMenu(
     onAction: (TrackMenuAction) -> Unit,
     offset: DpOffset = DpOffset.Zero,
     showGoTo: Boolean = true,
+    extraItems: @Composable ColumnScope.() -> Unit = {},
 ) {
     DropdownMenu(expanded = expanded, onDismissRequest = onDismiss, offset = offset) {
         MenuItem(R.string.menu_play) { onAction(TrackMenuAction.PLAY); onDismiss() }
@@ -66,6 +72,7 @@ fun TrackContextMenu(
         MenuItem(R.string.menu_edit_tags) { onAction(TrackMenuAction.EDIT_TAGS); onDismiss() }
         MenuItem(R.string.menu_fetch_metadata) { onAction(TrackMenuAction.FETCH_METADATA); onDismiss() }
         MenuItem(R.string.menu_details) { onAction(TrackMenuAction.DETAILS); onDismiss() }
+        extraItems()
     }
 }
 

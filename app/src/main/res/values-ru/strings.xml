@@ -49,6 +49,8 @@
     <string name="menu_edit_tags">Изменить теги</string>
     <string name="menu_fetch_metadata">Найти метаданные…</string>
     <string name="menu_details">Сведения</string>
+    <string name="menu_remove_from_playlist">Убрать из плейлиста</string>
+    <string name="menu_remove_from_favorites">Убрать из избранного</string>
 
     <string name="details_title">Название</string>
     <string name="details_artist">Исполнитель</string>
