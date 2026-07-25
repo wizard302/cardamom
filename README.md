@@ -6,12 +6,8 @@
 
 **A minimalist, modern local music player for Android.**
 
-A clean-room, Material You reimagining of [Vanilla Music](https://github.com/vanilla-music/vanilla):
-your own files, no accounts, no ads, no analytics.
-
 </div>
 
----
 
 ## Features
 

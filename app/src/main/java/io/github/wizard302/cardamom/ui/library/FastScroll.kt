@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -70,7 +70,7 @@ private fun BoxScope.FastScrollRail(
 
     val thumbHeight = 56.dp
     val railWidth = 28.dp
-    val bubbleSize = 64.dp
+    val bubbleSize = 72.dp
 
     BoxWithConstraints(
         modifier = Modifier
@@ -137,20 +137,25 @@ private fun BoxScope.FastScrollRail(
                 color = MaterialTheme.colorScheme.primaryContainer,
                 tonalElevation = 4.dp,
                 modifier = Modifier
+                    // Anchored to the rail's right edge and nudged just clear of
+                    // the thumb, so the bubble sits close to the screen edge.
+                    .align(Alignment.TopEnd)
                     .offset {
                         IntOffset(
-                            with(density) { (-72).dp.roundToPx() },
+                            with(density) { (-16).dp.roundToPx() },
                             // Centre the bubble on the thumb rather than aligning tops.
                             (fraction * trackPx).roundToInt() +
                                 with(density) { ((thumbHeight - bubbleSize) / 2).roundToPx() },
                         )
                     }
-                    .size(bubbleSize),
+                    // requiredSize, not size: the rail is only railWidth wide and
+                    // would otherwise squash the circle into a narrow pill.
+                    .requiredSize(bubbleSize),
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Text(
                         text = labelForIndex(targetIndex),
-                        style = MaterialTheme.typography.headlineSmall,
+                        style = MaterialTheme.typography.headlineMedium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                     )
                 }
