@@ -37,7 +37,7 @@ private const val MIN_ITEMS_FOR_SCROLLER = 50
 
 private val THUMB_WIDTH = 5.dp
 private val THUMB_END_PADDING = 4.dp
-private val BUBBLE_GAP = 6.dp
+private val BUBBLE_GAP = 14.dp
 
 /**
  * Wraps a LazyColumn with a draggable fast-scroll thumb on the right edge.
@@ -75,7 +75,7 @@ private fun BoxWithConstraintsScope.FastScrollRail(
 
     val thumbHeight = 56.dp
     val railWidth = 28.dp
-    val bubbleSize = 60.dp
+    val bubbleSize = 68.dp
 
     val trackPx = with(density) { (maxHeight - thumbHeight).toPx() }.coerceAtLeast(1f)
 
