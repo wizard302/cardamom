@@ -113,15 +113,34 @@ class LyricsRepository @Inject constructor(
             return failure("lookup", response.code())
         }
         val body = response.body().takeIf { response.isSuccessful }
-        return cache(artist, title, durationSec, body)
+        // The exact endpoint also demands a matching album and a length within
+        // a couple of seconds, so a 404 usually means the tags disagree with
+        // LRCLIB rather than that nobody transcribed the song. Fall back to the
+        // fuzzy search the user would otherwise have to trigger by hand — but
+        // keep the candidate close in length, since nothing else guards against
+        // picking a cover or a live take with the same title.
+        return body?.let { cache(artist, title, durationSec, it) }
+            ?: searchAndCache(artist, title, durationSec, AUTO_MAX_DRIFT_SEC)
     }
 
-    /** Fuzzy lookup by artist and title; keeps the candidate closest to the track. */
+    /**
+     * Fuzzy lookup by artist and title; keeps the candidate closest to the
+     * track. [maxDriftSec] bounds how far a candidate's length may be from the
+     * track: unbounded for a manual search, where the user sees what was
+     * applied, tight for the automatic fallback.
+     */
     private suspend fun searchAndCache(
         artist: String,
         title: String,
         durationSec: Int,
+        maxDriftSec: Int = Int.MAX_VALUE,
     ): FetchResult {
+        // Both query fields empty make LRCLIB answer HTTP 400, which the panel
+        // would report as a connection problem; there is nothing to search for.
+        if (title.isBlank() && artist.isBlank()) {
+            return FetchResult(null, networkError = false)
+        }
+
         val response = runCatching {
             lrcLibApi.search(artist, title)
         }.getOrElse { return failure("search", it) }
@@ -129,22 +148,35 @@ class LyricsRepository @Inject constructor(
         if (!response.isSuccessful) {
             return failure("search", response.code())
         }
-        return cache(artist, title, durationSec, response.body().orEmpty().bestMatch(durationSec))
+        val match = response.body().orEmpty().bestMatch(durationSec, maxDriftSec)
+        return cache(artist, title, durationSec, match)
     }
 
     /**
      * Prefers a candidate with synced lyrics, then the one whose length is
      * closest to the track being played. Entries without any text are useless
-     * (LRCLIB lists instrumentals too), so they are dropped first.
+     * (LRCLIB lists instrumentals too), so they are dropped first, as is
+     * anything further than [maxDriftSec] from the track. A candidate without a
+     * length is only kept when no bound was asked for.
      */
-    private fun List<LrcLibResponse>.bestMatch(durationSec: Int): LrcLibResponse? =
+    private fun List<LrcLibResponse>.bestMatch(
+        durationSec: Int,
+        maxDriftSec: Int,
+    ): LrcLibResponse? =
         filterNot { it.plainLyrics.isNullOrBlank() && it.syncedLyrics.isNullOrBlank() }
+            .map { it to it.driftFrom(durationSec) }
+            .filter { (_, drift) -> drift <= maxDriftSec }
             .minWithOrNull(
                 compareBy(
-                    { it.syncedLyrics.isNullOrBlank() },
-                    { abs((it.duration?.toInt() ?: 0) - durationSec) },
+                    { (candidate, _) -> candidate.syncedLyrics.isNullOrBlank() },
+                    { (_, drift) -> drift },
                 ),
             )
+            ?.first
+
+    /** Length difference from the track, or [Int.MAX_VALUE] when unknown. */
+    private fun LrcLibResponse.driftFrom(durationSec: Int): Int =
+        duration?.toInt()?.let { abs(it - durationSec) } ?: Int.MAX_VALUE
 
     private suspend fun cache(
         artist: String,
@@ -181,4 +213,11 @@ class LyricsRepository @Inject constructor(
 private const val TAG = "Cardamom"
 private const val HTTP_NOT_FOUND = 404
 private const val MAX_DURATION_SEC = 3600
+
+/**
+ * How far a fuzzy-search candidate's length may sit from the track when the
+ * fallback runs unattended: wide enough for a different master or rip, narrow
+ * enough to reject another song that happens to share artist and title.
+ */
+private const val AUTO_MAX_DRIFT_SEC = 15
 private const val NEGATIVE_CACHE_TTL_MS = 14L * 24 * 60 * 60 * 1000
