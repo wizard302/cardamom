@@ -287,7 +287,7 @@ fun NowPlayingScreen(
                         contentDescription = stringResource(R.string.lyrics_title),
                     )
                 }
-                ToggleIconButton(active = isFavorite, onClick = viewModel::toggleFavorite) {
+                IconButton(onClick = viewModel::toggleFavorite) {
                     Icon(
                         imageVector = if (isFavorite) {
                             Icons.Rounded.Favorite
@@ -295,6 +295,11 @@ fun NowPlayingScreen(
                             Icons.Rounded.FavoriteBorder
                         },
                         contentDescription = stringResource(R.string.action_favorite),
+                        tint = if (isFavorite) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
                     )
                 }
                 // Queue button doubles as the position indicator ("3 / 108").
