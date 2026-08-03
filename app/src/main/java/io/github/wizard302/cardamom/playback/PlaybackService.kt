@@ -5,6 +5,7 @@ import android.content.Intent
 import android.media.AudioManager
 import android.os.Bundle
 import androidx.annotation.OptIn
+import androidx.core.os.BundleCompat
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -126,7 +127,7 @@ class PlaybackService : MediaSessionService() {
         mediaSession?.player?.let { PlayerWidget.update(this, it) }
     }
 
-    private val reorderShuffleCommand = SessionCommand(COMMAND_REORDER_SHUFFLE, Bundle.EMPTY)
+    private val enqueueCommand = SessionCommand(COMMAND_ENQUEUE, Bundle.EMPTY)
 
     private val sessionCallback = object : MediaSession.Callback {
         @OptIn(UnstableApi::class)
@@ -137,7 +138,7 @@ class PlaybackService : MediaSessionService() {
             MediaSession.ConnectionResult.AcceptedResultBuilder(session)
                 .setAvailableSessionCommands(
                     MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon()
-                        .add(reorderShuffleCommand)
+                        .add(enqueueCommand)
                         .build(),
                 )
                 .build()
@@ -149,16 +150,35 @@ class PlaybackService : MediaSessionService() {
             customCommand: SessionCommand,
             args: Bundle,
         ): ListenableFuture<SessionResult> {
-            if (customCommand.customAction != COMMAND_REORDER_SHUFFLE) {
+            if (customCommand.customAction != COMMAND_ENQUEUE) {
                 return Futures.immediateFuture(SessionResult(SessionError.ERROR_NOT_SUPPORTED))
             }
-            applyShuffleReorder(
-                insertAt = args.getInt(EXTRA_INSERT_AT, -1),
-                count = args.getInt(EXTRA_INSERT_COUNT, 0),
-                next = args.getBoolean(EXTRA_INSERT_NEXT, true),
-            )
+            val items = BundleCompat.getParcelableArrayList(args, EXTRA_ITEMS, Bundle::class.java)
+                ?.map { MediaItem.fromBundle(it) }
+                .orEmpty()
+            enqueue(items, next = args.getBoolean(EXTRA_PLAY_NEXT, true))
             return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
         }
+    }
+
+    /**
+     * Inserts [items] and fixes the shuffle order in one pass on the player
+     * thread, so repeated "play next" taps stack up in the order they were
+     * made instead of racing each other.
+     */
+    private fun enqueue(items: List<MediaItem>, next: Boolean) {
+        val player = mediaSession?.player ?: return
+        if (items.isEmpty()) return
+        val wasEmpty = player.mediaItemCount == 0
+        val insertAt = if (next && !wasEmpty) {
+            player.currentMediaItemIndex + 1
+        } else {
+            player.mediaItemCount
+        }
+        player.addMediaItems(insertAt, items)
+        applyShuffleReorder(insertAt, items.size, next)
+        if (player.playbackState == Player.STATE_IDLE) player.prepare()
+        if (wasEmpty) player.play()
     }
 
     /**

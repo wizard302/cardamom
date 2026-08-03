@@ -3,10 +3,12 @@ package io.github.wizard302.cardamom.playback
 import android.content.ComponentName
 import android.content.Context
 import android.os.Bundle
+import androidx.annotation.OptIn
 import androidx.core.content.ContextCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionToken
@@ -164,39 +166,42 @@ class PlayerConnection @Inject constructor(
     }
 
     /** Inserts [tracks] right after the current item; starts playback if idle. */
-    fun playNext(tracks: List<Track>) = withController {
-        val insertAt = if (mediaItemCount == 0) 0 else currentMediaItemIndex + 1
-        addMediaItems(insertAt, tracks.map { it.toMediaItem() })
-        requestShuffleReorder(insertAt, tracks.size, next = true)
-        if (playbackState == Player.STATE_IDLE) prepare()
-        if (mediaItemCount == tracks.size) play()
-    }
+    fun playNext(tracks: List<Track>) = enqueue(tracks, next = true)
 
     /** Appends [tracks] to the end of the queue; starts playback if idle. */
-    fun addToQueue(tracks: List<Track>) = withController {
-        val insertAt = mediaItemCount
-        addMediaItems(tracks.map { it.toMediaItem() })
-        requestShuffleReorder(insertAt, tracks.size, next = false)
-        if (playbackState == Player.STATE_IDLE) prepare()
-        if (mediaItemCount == tracks.size) play()
-    }
+    fun addToQueue(tracks: List<Track>) = enqueue(tracks, next = false)
 
     /**
-     * With shuffle on the timeline position means nothing: ExoPlayer scatters
-     * inserted items across its own shuffled order, so a "play next" would be
-     * heard at a random point later. The order is only reachable from the
-     * service, which finishes the insertion on this request.
+     * Queue insertions are carried out by the service (see [COMMAND_ENQUEUE]):
+     * a controller-side insertion reaches the player asynchronously, so the
+     * shuffle order could not be fixed up afterwards without racing it.
      */
-    private fun MediaController.requestShuffleReorder(insertAt: Int, count: Int, next: Boolean) {
-        if (!shuffleModeEnabled || count <= 0) return
-        val command = SessionCommand(COMMAND_REORDER_SHUFFLE, Bundle.EMPTY)
-        if (!isSessionCommandAvailable(command)) return
+    @OptIn(UnstableApi::class)
+    private fun enqueue(tracks: List<Track>, next: Boolean) = withController {
+        if (tracks.isEmpty()) return@withController
+        val items = tracks.map { it.toMediaItem() }
+        val command = SessionCommand(COMMAND_ENQUEUE, Bundle.EMPTY)
+        if (!isSessionCommandAvailable(command)) {
+            // No session to do it for us; insert directly and accept that
+            // shuffle will scatter the items.
+            val insertAt = when {
+                mediaItemCount == 0 -> 0
+                next -> currentMediaItemIndex + 1
+                else -> mediaItemCount
+            }
+            addMediaItems(insertAt, items)
+            if (playbackState == Player.STATE_IDLE) prepare()
+            if (mediaItemCount == items.size) play()
+            return@withController
+        }
         sendCustomCommand(
             command,
             Bundle().apply {
-                putInt(EXTRA_INSERT_AT, insertAt)
-                putInt(EXTRA_INSERT_COUNT, count)
-                putBoolean(EXTRA_INSERT_NEXT, next)
+                putParcelableArrayList(
+                    EXTRA_ITEMS,
+                    items.mapTo(ArrayList()) { it.toBundleIncludeLocalConfiguration() },
+                )
+                putBoolean(EXTRA_PLAY_NEXT, next)
             },
         )
     }

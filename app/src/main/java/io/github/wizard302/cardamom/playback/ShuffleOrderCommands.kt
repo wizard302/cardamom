@@ -1,25 +1,23 @@
 package io.github.wizard302.cardamom.playback
 
 /**
- * Custom session command used to fix up the shuffle order after a queue
- * insertion.
+ * Custom session command carrying a "play next" / "add to queue" request.
  *
  * With shuffle on, ExoPlayer plays the timeline through a separate shuffled
- * order, and inserted items land at a random spot in it. "Play next" and "add
- * to queue" therefore have no audible effect on the play order. The shuffle
- * order lives inside ExoPlayer and is not reachable through MediaController, so
- * the controller inserts the items and then asks the service to move them.
+ * order and drops inserted items at a random place in it, so a timeline
+ * insertion alone has no audible effect on what plays next. That order is only
+ * reachable from the service, and a MediaController's own insertion reaches the
+ * player asynchronously — a follow-up command would race it and act on the
+ * previous insertion. So the whole operation is handed to the service, which
+ * inserts and fixes the shuffle order in one go.
  */
-const val COMMAND_REORDER_SHUFFLE = "io.github.wizard302.cardamom.REORDER_SHUFFLE"
+const val COMMAND_ENQUEUE = "io.github.wizard302.cardamom.ENQUEUE"
 
-/** Timeline index the items were inserted at. */
-const val EXTRA_INSERT_AT = "insert_at"
+/** ArrayList of bundled MediaItems to enqueue. */
+const val EXTRA_ITEMS = "items"
 
-/** How many items were inserted. */
-const val EXTRA_INSERT_COUNT = "insert_count"
-
-/** True to place them right after the current item, false to place them last. */
-const val EXTRA_INSERT_NEXT = "insert_next"
+/** True to play them right after the current track, false to append them. */
+const val EXTRA_PLAY_NEXT = "play_next"
 
 /**
  * Moves the timeline indices `insertAt until insertAt + count` inside [order]
