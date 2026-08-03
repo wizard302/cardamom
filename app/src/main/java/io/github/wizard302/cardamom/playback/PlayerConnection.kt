@@ -2,11 +2,13 @@ package io.github.wizard302.cardamom.playback
 
 import android.content.ComponentName
 import android.content.Context
+import android.os.Bundle
 import androidx.core.content.ContextCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
+import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionToken
 import io.github.wizard302.cardamom.data.media.Track
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -165,15 +167,38 @@ class PlayerConnection @Inject constructor(
     fun playNext(tracks: List<Track>) = withController {
         val insertAt = if (mediaItemCount == 0) 0 else currentMediaItemIndex + 1
         addMediaItems(insertAt, tracks.map { it.toMediaItem() })
+        requestShuffleReorder(insertAt, tracks.size, next = true)
         if (playbackState == Player.STATE_IDLE) prepare()
         if (mediaItemCount == tracks.size) play()
     }
 
     /** Appends [tracks] to the end of the queue; starts playback if idle. */
     fun addToQueue(tracks: List<Track>) = withController {
+        val insertAt = mediaItemCount
         addMediaItems(tracks.map { it.toMediaItem() })
+        requestShuffleReorder(insertAt, tracks.size, next = false)
         if (playbackState == Player.STATE_IDLE) prepare()
         if (mediaItemCount == tracks.size) play()
+    }
+
+    /**
+     * With shuffle on the timeline position means nothing: ExoPlayer scatters
+     * inserted items across its own shuffled order, so a "play next" would be
+     * heard at a random point later. The order is only reachable from the
+     * service, which finishes the insertion on this request.
+     */
+    private fun MediaController.requestShuffleReorder(insertAt: Int, count: Int, next: Boolean) {
+        if (!shuffleModeEnabled || count <= 0) return
+        val command = SessionCommand(COMMAND_REORDER_SHUFFLE, Bundle.EMPTY)
+        if (!isSessionCommandAvailable(command)) return
+        sendCustomCommand(
+            command,
+            Bundle().apply {
+                putInt(EXTRA_INSERT_AT, insertAt)
+                putInt(EXTRA_INSERT_COUNT, count)
+                putBoolean(EXTRA_INSERT_NEXT, next)
+            },
+        )
     }
 
     fun seekToQueueItem(index: Int) = withController {

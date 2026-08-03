@@ -3,6 +3,7 @@ package io.github.wizard302.cardamom.playback
 import android.app.PendingIntent
 import android.content.Intent
 import android.media.AudioManager
+import android.os.Bundle
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -12,8 +13,14 @@ import androidx.media3.common.Player
 import androidx.media3.common.Timeline
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.ShuffleOrder
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
+import androidx.media3.session.SessionCommand
+import androidx.media3.session.SessionError
+import androidx.media3.session.SessionResult
+import com.google.common.util.concurrent.Futures
+import com.google.common.util.concurrent.ListenableFuture
 import io.github.wizard302.cardamom.MainActivity
 import io.github.wizard302.cardamom.data.media.MediaStoreScanner
 import io.github.wizard302.cardamom.data.settings.ReplayGainMode
@@ -119,6 +126,70 @@ class PlaybackService : MediaSessionService() {
         mediaSession?.player?.let { PlayerWidget.update(this, it) }
     }
 
+    private val reorderShuffleCommand = SessionCommand(COMMAND_REORDER_SHUFFLE, Bundle.EMPTY)
+
+    private val sessionCallback = object : MediaSession.Callback {
+        @OptIn(UnstableApi::class)
+        override fun onConnect(
+            session: MediaSession,
+            controller: MediaSession.ControllerInfo,
+        ): MediaSession.ConnectionResult =
+            MediaSession.ConnectionResult.AcceptedResultBuilder(session)
+                .setAvailableSessionCommands(
+                    MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon()
+                        .add(reorderShuffleCommand)
+                        .build(),
+                )
+                .build()
+
+        @OptIn(UnstableApi::class)
+        override fun onCustomCommand(
+            session: MediaSession,
+            controller: MediaSession.ControllerInfo,
+            customCommand: SessionCommand,
+            args: Bundle,
+        ): ListenableFuture<SessionResult> {
+            if (customCommand.customAction != COMMAND_REORDER_SHUFFLE) {
+                return Futures.immediateFuture(SessionResult(SessionError.ERROR_NOT_SUPPORTED))
+            }
+            applyShuffleReorder(
+                insertAt = args.getInt(EXTRA_INSERT_AT, -1),
+                count = args.getInt(EXTRA_INSERT_COUNT, 0),
+                next = args.getBoolean(EXTRA_INSERT_NEXT, true),
+            )
+            return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+        }
+    }
+
+    /**
+     * Puts freshly inserted items where the user asked for them in the shuffled
+     * play order — ExoPlayer would otherwise scatter them at random.
+     */
+    @OptIn(UnstableApi::class)
+    private fun applyShuffleReorder(insertAt: Int, count: Int, next: Boolean) {
+        val player = mediaSession?.player as? ExoPlayer ?: return
+        if (!player.shuffleModeEnabled || insertAt < 0 || count <= 0) return
+        val order = player.shuffleOrder
+        if (order.length != player.mediaItemCount) return
+        val play = buildList {
+            var i = order.firstIndex
+            while (i != C.INDEX_UNSET) {
+                add(i)
+                i = order.getNextIndex(i)
+            }
+        }
+        val reordered = reorderShuffle(
+            order = play,
+            insertAt = insertAt,
+            count = count,
+            current = player.currentMediaItemIndex,
+            next = next,
+        ) ?: return
+        player.setShuffleOrder(
+            ShuffleOrder.DefaultShuffleOrder(reordered, System.nanoTime()),
+        )
+    }
+
     @OptIn(UnstableApi::class)
     override fun onCreate() {
         super.onCreate()
@@ -164,6 +235,7 @@ class PlaybackService : MediaSessionService() {
 
         mediaSession = MediaSession.Builder(this, player)
             .setSessionActivity(sessionActivity)
+            .setCallback(sessionCallback)
             .build()
 
         scope.launch {
