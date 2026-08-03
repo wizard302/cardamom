@@ -38,6 +38,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -286,7 +287,7 @@ fun NowPlayingScreen(
                         contentDescription = stringResource(R.string.lyrics_title),
                     )
                 }
-                IconButton(onClick = viewModel::toggleFavorite) {
+                ToggleIconButton(active = isFavorite, onClick = viewModel::toggleFavorite) {
                     Icon(
                         imageVector = if (isFavorite) {
                             Icons.Rounded.Favorite
@@ -294,11 +295,6 @@ fun NowPlayingScreen(
                             Icons.Rounded.FavoriteBorder
                         },
                         contentDescription = stringResource(R.string.action_favorite),
-                        tint = if (isFavorite) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
                     )
                 }
                 // Queue button doubles as the position indicator ("3 / 108").
@@ -448,15 +444,10 @@ fun NowPlayingScreen(
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                IconButton(onClick = viewModel::toggleShuffle) {
+                ToggleIconButton(active = shuffleEnabled, onClick = viewModel::toggleShuffle) {
                     Icon(
                         imageVector = Icons.Rounded.Shuffle,
                         contentDescription = stringResource(R.string.action_shuffle),
-                        tint = if (shuffleEnabled) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
                     )
                 }
                 IconButton(onClick = viewModel::previous) {
@@ -483,7 +474,10 @@ fun NowPlayingScreen(
                         modifier = Modifier.size(36.dp),
                     )
                 }
-                IconButton(onClick = viewModel::cycleRepeatMode) {
+                ToggleIconButton(
+                    active = repeatMode != Player.REPEAT_MODE_OFF,
+                    onClick = viewModel::cycleRepeatMode,
+                ) {
                     Icon(
                         imageVector = if (repeatMode == Player.REPEAT_MODE_ONE) {
                             Icons.Rounded.RepeatOne
@@ -491,11 +485,6 @@ fun NowPlayingScreen(
                             Icons.Rounded.Repeat
                         },
                         contentDescription = stringResource(R.string.action_repeat),
-                        tint = if (repeatMode != Player.REPEAT_MODE_OFF) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
                     )
                 }
             }
@@ -524,4 +513,32 @@ fun NowPlayingScreen(
             Spacer(modifier = Modifier.weight(1f))
         }
     }
+}
+
+/**
+ * Icon button whose "on" state is carried by a filled container, not just a
+ * tint. With Material You the primary colour is derived from the wallpaper and
+ * can sit very close to onSurfaceVariant, which made a tint-only highlight hard
+ * to read; the container keeps the state obvious in any palette.
+ */
+@Composable
+private fun ToggleIconButton(
+    active: Boolean,
+    onClick: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    IconButton(
+        onClick = onClick,
+        colors = if (active) {
+            IconButtonDefaults.iconButtonColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+        } else {
+            IconButtonDefaults.iconButtonColors(
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        },
+        content = content,
+    )
 }
