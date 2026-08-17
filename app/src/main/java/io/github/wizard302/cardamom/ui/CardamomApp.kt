@@ -491,6 +491,7 @@ private fun LibraryScreen(
                 0 -> ArtistsTab(
                     artists = artists,
                     emptyText = emptyText,
+                    sort = artistSort,
                     onArtistClick = onArtistClick,
                     onPlay = { libraryViewModel.playArtist(it.id) },
                     onPlayNext = { libraryViewModel.playNextArtist(it.id) },
@@ -499,6 +500,7 @@ private fun LibraryScreen(
                 1 -> AlbumsTab(
                     albums = albums,
                     emptyText = emptyText,
+                    sort = albumSort,
                     onAlbumClick = onAlbumClick,
                     onPlay = { libraryViewModel.playAlbum(it.id) },
                     onPlayNext = { libraryViewModel.playNextAlbum(it.id) },
@@ -510,6 +512,7 @@ private fun LibraryScreen(
                 2 -> TracksTab(
                     tracks = tracks,
                     emptyText = emptyText,
+                    sort = trackSort,
                     onTrackClick = { index -> libraryViewModel.play(tracks, index) },
                     onMenuAction = onTrackMenuAction,
                 )

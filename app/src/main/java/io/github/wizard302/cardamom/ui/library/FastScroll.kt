@@ -160,9 +160,17 @@ private fun BoxWithConstraintsScope.FastScrollRail(
                 .size(bubbleSize),
         ) {
             Box(contentAlignment = Alignment.Center) {
+                val label = labelForIndex(targetIndex)
                 Text(
-                    text = labelForIndex(targetIndex),
-                    style = MaterialTheme.typography.headlineMedium,
+                    text = label,
+                    // Non-alphabetical sorts show years or durations; those need
+                    // a smaller size to stay on one line inside the bubble.
+                    style = if (label.length > 2) {
+                        MaterialTheme.typography.titleMedium
+                    } else {
+                        MaterialTheme.typography.headlineMedium
+                    },
+                    maxLines = 1,
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
             }

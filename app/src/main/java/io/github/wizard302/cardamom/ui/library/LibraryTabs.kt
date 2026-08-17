@@ -38,12 +38,18 @@ import coil3.compose.AsyncImage
 import io.github.wizard302.cardamom.data.media.Album
 import io.github.wizard302.cardamom.data.media.Artist
 import io.github.wizard302.cardamom.data.media.Track
+import io.github.wizard302.cardamom.data.settings.AlbumSort
+import io.github.wizard302.cardamom.data.settings.ArtistSort
+import io.github.wizard302.cardamom.data.settings.TrackSort
+import java.time.Instant
+import java.time.ZoneId
 import java.util.Locale
 
 @Composable
 fun TracksTab(
     tracks: List<Track>,
     emptyText: String,
+    sort: TrackSort,
     onTrackClick: (index: Int) -> Unit,
     onMenuAction: (TrackMenuAction, Track) -> Unit,
     modifier: Modifier = Modifier,
@@ -56,7 +62,7 @@ fun TracksTab(
     FastScroll(
         listState = listState,
         itemCount = tracks.size,
-        labelForIndex = { tracks[it].title.firstLetter() },
+        labelForIndex = { tracks[it].fastScrollLabel(sort) },
         modifier = modifier.fillMaxSize(),
     ) {
         LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
@@ -133,6 +139,7 @@ fun TrackRow(
 fun AlbumsTab(
     albums: List<Album>,
     emptyText: String,
+    sort: AlbumSort,
     onAlbumClick: (Album) -> Unit,
     onPlay: (Album) -> Unit,
     onPlayNext: (Album) -> Unit,
@@ -150,7 +157,7 @@ fun AlbumsTab(
     FastScroll(
         listState = listState,
         itemCount = albums.size,
-        labelForIndex = { albums[it].title.firstLetter() },
+        labelForIndex = { albums[it].fastScrollLabel(sort) },
         modifier = modifier.fillMaxSize(),
     ) {
         LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
@@ -209,6 +216,7 @@ fun AlbumsTab(
 fun ArtistsTab(
     artists: List<Artist>,
     emptyText: String,
+    sort: ArtistSort,
     onArtistClick: (Artist) -> Unit,
     onPlay: (Artist) -> Unit,
     onPlayNext: (Artist) -> Unit,
@@ -223,7 +231,7 @@ fun ArtistsTab(
     FastScroll(
         listState = listState,
         itemCount = artists.size,
-        labelForIndex = { artists[it].name.firstLetter() },
+        labelForIndex = { artists[it].fastScrollLabel(sort) },
         modifier = modifier.fillMaxSize(),
     ) {
         LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
@@ -326,6 +334,38 @@ fun ArtworkThumb(model: Any?, size: Int = 48) {
 
 fun String.firstLetter(): String =
     firstOrNull()?.uppercaseChar()?.toString() ?: "#"
+
+/**
+ * Fast-scroll bubble text must follow the key the list is actually sorted by,
+ * otherwise the letter shown has nothing to do with the surrounding rows.
+ */
+private fun Track.fastScrollLabel(sort: TrackSort): String = when (sort) {
+    TrackSort.TITLE -> title.firstLetter()
+    TrackSort.ARTIST -> artist.firstLetter()
+    TrackSort.ALBUM -> album.firstLetter()
+    TrackSort.DATE_ADDED -> dateAdded.addedYear()
+    TrackSort.DURATION -> formatDuration(durationMs)
+}
+
+private fun Album.fastScrollLabel(sort: AlbumSort): String = when (sort) {
+    AlbumSort.TITLE -> title.firstLetter()
+    AlbumSort.ARTIST -> artist.firstLetter()
+    AlbumSort.YEAR -> if (year > 0) year.toString() else "#"
+    AlbumSort.DATE_ADDED -> dateAdded.addedYear()
+}
+
+private fun Artist.fastScrollLabel(sort: ArtistSort): String = when (sort) {
+    ArtistSort.NAME -> name.firstLetter()
+    ArtistSort.TRACK_COUNT -> trackCount.toString()
+}
+
+/** MediaStore DATE_ADDED is in epoch seconds. */
+private fun Long.addedYear(): String =
+    if (this <= 0L) {
+        "#"
+    } else {
+        Instant.ofEpochSecond(this).atZone(ZoneId.systemDefault()).year.toString()
+    }
 
 fun formatDuration(ms: Long): String {
     val totalSeconds = ms / 1000
