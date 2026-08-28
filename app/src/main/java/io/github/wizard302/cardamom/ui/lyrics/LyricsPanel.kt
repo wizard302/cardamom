@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
@@ -253,16 +254,26 @@ private fun SyncedLyrics(lines: List<io.github.wizard302.cardamom.data.lyrics.Lr
     }
 }
 
+/**
+ * Selectable so the words can be copied out. Only the plain view offers this:
+ * in the synced one every line is a seek target, and a long press there should
+ * stay free for that rather than starting a selection.
+ */
 @Composable
 private fun PlainLyrics(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.bodyLarge,
+    SelectionContainer(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-    )
+            .verticalScroll(rememberScrollState()),
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp),
+        )
+    }
 }
 
 @Composable
