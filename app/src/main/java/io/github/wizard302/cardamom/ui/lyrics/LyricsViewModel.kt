@@ -17,6 +17,7 @@ import io.github.wizard302.cardamom.playback.PlayerConnection
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -95,7 +96,12 @@ class LyricsViewModel @Inject constructor(
     /** Text eligible for embedding: the LRCLIB copy, synced preferred. */
     private var fetchedText: String? = null
 
-    private var loadedMediaId: Long? = null
+    /**
+     * The in-flight lyrics lookup. Cancelled whenever a new one starts, so a
+     * slow fetch for the previous track cannot land on top of the current one —
+     * that is how one song's lyrics used to surface under another's title.
+     */
+    private var loadJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -108,15 +114,31 @@ class LyricsViewModel @Inject constructor(
 
     private fun load() {
         val item = connection.currentItem.value ?: return
-        loadedMediaId = item.mediaId.toLongOrNull()
         val meta = item.mediaMetadata
         val artist = meta.artist?.toString().orEmpty()
         val title = meta.title?.toString().orEmpty()
+        // Drop the previous track's text right away: the spinner covers it, but
+        // leaving it in state lets it reappear if this lookup ends up empty.
+        _lines.value = emptyList()
+        fetchedText = null
         _state.update {
-            it.copy(loading = true, queryArtist = artist, queryTitle = title, notFound = false, error = false)
+            it.copy(
+                loading = true,
+                // A manual search cancelled by a track change must not leave
+                // the spinner up for the new track.
+                searching = false,
+                plain = null,
+                hasSynced = false,
+                canSaveToFile = false,
+                queryArtist = artist,
+                queryTitle = title,
+                notFound = false,
+                error = false,
+            )
         }
         val uri = item.localConfiguration?.uri
-        viewModelScope.launch {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
             val lyrics = if (uri != null) {
                 lyricsRepository.getLyrics(
                     uri = uri,
@@ -139,7 +161,8 @@ class LyricsViewModel @Inject constructor(
     fun research() {
         val s = _state.value
         _state.update { it.copy(searching = true, notFound = false, error = false) }
-        viewModelScope.launch {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
             val lyrics = lyricsRepository.refetch(
                 artist = s.queryArtist,
                 title = s.queryTitle,

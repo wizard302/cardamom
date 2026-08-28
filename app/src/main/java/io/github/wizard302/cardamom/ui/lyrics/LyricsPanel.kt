@@ -182,10 +182,13 @@ fun LyricsPanel(
                     onSeek = viewModel::seekToLine,
                 )
 
-                !state.plain.isNullOrBlank() || lines.isNotEmpty() -> PlainLyrics(
-                    text = state.plain?.takeIf { it.isNotBlank() }
-                        ?: lines.joinToString("\n") { it.text },
-                )
+                // The karaoke switch changes how the lyrics are displayed, not
+                // which ones: once synced text is loaded, the plain view is that
+                // same text without its timestamps. Falling back to the file's
+                // own copy here would swap the words under the user mid-toggle.
+                lines.isNotEmpty() -> PlainLyrics(text = lines.joinToString("\n") { it.text })
+
+                !state.plain.isNullOrBlank() -> PlainLyrics(text = state.plain.orEmpty())
 
                 state.error -> Centered {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {

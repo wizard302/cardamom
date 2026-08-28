@@ -43,7 +43,7 @@ class LyricsRepository @Inject constructor(
         album: String,
         durationMs: Long,
     ): Lyrics = withContext(Dispatchers.IO) {
-        val embeddedPlain = tagRepository.readLyrics(uri)?.takeIf { it.isNotBlank() }
+        val embeddedPlain = LyricsSanitizer.clean(tagRepository.readLyrics(uri))
 
         val durationSec = (durationMs / 1000).toInt()
         val cached = runCatching { lyricsDao.get(artist, title, durationSec) }.getOrNull()
@@ -58,8 +58,8 @@ class LyricsRepository @Inject constructor(
         }
 
         Lyrics(
-            plain = embeddedPlain ?: fetched.entity?.plainLyrics?.takeIf { it.isNotBlank() },
-            synced = fetched.entity?.syncedLyrics?.takeIf { it.isNotBlank() },
+            plain = embeddedPlain ?: LyricsSanitizer.clean(fetched.entity?.plainLyrics),
+            synced = LyricsSanitizer.clean(fetched.entity?.syncedLyrics),
             // An embedded copy makes a failed lookup irrelevant.
             networkError = fetched.networkError && embeddedPlain == null,
             plainFromFile = embeddedPlain != null,
@@ -79,8 +79,8 @@ class LyricsRepository @Inject constructor(
     ): Lyrics = withContext(Dispatchers.IO) {
         val result = searchAndCache(artist, title, (durationMs / 1000).toInt())
         Lyrics(
-            plain = result.entity?.plainLyrics,
-            synced = result.entity?.syncedLyrics,
+            plain = LyricsSanitizer.clean(result.entity?.plainLyrics),
+            synced = LyricsSanitizer.clean(result.entity?.syncedLyrics),
             networkError = result.networkError,
         )
     }
