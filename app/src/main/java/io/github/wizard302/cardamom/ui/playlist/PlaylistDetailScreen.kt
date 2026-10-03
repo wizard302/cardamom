@@ -21,6 +21,8 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -28,6 +30,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,9 +44,11 @@ import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.wizard302.cardamom.R
-import io.github.wizard302.cardamom.ui.SwipeToRemove
 import io.github.wizard302.cardamom.data.media.Track
+import io.github.wizard302.cardamom.ui.SwipeToRemove
 import io.github.wizard302.cardamom.ui.library.TrackMenuAction
+import io.github.wizard302.cardamom.ui.showUndo
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,6 +68,17 @@ fun PlaylistDetailScreen(
     // Mirror the DB rows locally, but freeze while a reorder drag is in flight.
     LaunchedEffect(serverRows) {
         if (draggingKey == null) rows = serverRows
+    }
+
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val removedMessage = stringResource(R.string.removed_from_playlist)
+    val undoLabel = stringResource(R.string.action_undo)
+    val removeTrack: (Long) -> Unit = { rowId ->
+        viewModel.removeTrack(rowId)
+        scope.launch {
+            snackbarHostState.showUndo(removedMessage, undoLabel) { viewModel.undoRemove(rowId) }
+        }
     }
 
     var showMenu by remember { mutableStateOf(false) }
@@ -148,7 +164,7 @@ fun PlaylistDetailScreen(
             itemsIndexed(rows, key = { _, row -> row.key }) { index, row ->
                 val isDragged = draggingKey == row.key
                 SwipeToRemove(
-                    onRemove = { viewModel.removeTrack(row.key) },
+                    onRemove = { removeTrack(row.key) },
                     modifier = Modifier
                         .zIndex(if (isDragged) 1f else 0f)
                         .then(if (isDragged) Modifier else Modifier.animateItem())
@@ -162,7 +178,7 @@ fun PlaylistDetailScreen(
                         },
                         onMenuAction = onTrackMenuAction,
                         removeLabel = stringResource(R.string.menu_remove_from_playlist),
-                        onRemove = { viewModel.removeTrack(row.key) },
+                        onRemove = { removeTrack(row.key) },
                         dragHandle = Modifier.pointerInput(row.key) {
                             var from = -1
                             detectDragGestures(
@@ -202,6 +218,10 @@ fun PlaylistDetailScreen(
                 }
             }
         }
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
     }
 
     if (renaming) {

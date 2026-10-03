@@ -22,6 +22,14 @@ const val COMMAND_QUEUE_REMOVE = "io.github.wizard302.cardamom.QUEUE_REMOVE"
  */
 const val COMMAND_QUEUE_MOVE = "io.github.wizard302.cardamom.QUEUE_MOVE"
 
+/**
+ * Re-inserts a removed queue item ([EXTRA_ITEM]) at timeline index [EXTRA_INDEX]
+ * and, with shuffle on, at play-order position [EXTRA_TO] — the undo of
+ * [COMMAND_QUEUE_REMOVE].
+ */
+const val COMMAND_QUEUE_RESTORE = "io.github.wizard302.cardamom.QUEUE_RESTORE"
+
+const val EXTRA_ITEM = "item"
 const val EXTRA_INDEX = "index"
 const val EXTRA_FROM = "from"
 const val EXTRA_TO = "to"

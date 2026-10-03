@@ -3,6 +3,7 @@ package io.github.wizard302.cardamom.ui.playlist
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.wizard302.cardamom.data.db.FavoriteEntity
 import io.github.wizard302.cardamom.data.media.LibraryRepository
 import io.github.wizard302.cardamom.data.playlist.M3uEntry
 import io.github.wizard302.cardamom.data.playlist.M3uIo
@@ -10,6 +11,8 @@ import io.github.wizard302.cardamom.data.playlist.PlaylistRepository
 import io.github.wizard302.cardamom.playback.PlayerConnection
 import io.github.wizard302.cardamom.util.repairMojibake
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -55,8 +58,16 @@ class FavoritesViewModel @Inject constructor(
         playerConnection.playQueue(playable.mapNotNull { it.track }, startIndex)
     }
 
+    /** Removed favorites by media id, kept so a removal can be undone. */
+    private val removed = mutableMapOf<Long, Deferred<FavoriteEntity?>>()
+
     fun remove(mediaId: Long) {
-        viewModelScope.launch { repository.removeFavorite(mediaId) }
+        removed[mediaId] = viewModelScope.async { repository.removeFavorite(mediaId) }
+    }
+
+    fun undoRemove(mediaId: Long) {
+        val pending = removed.remove(mediaId) ?: return
+        viewModelScope.launch { pending.await()?.let { repository.restoreFavorite(it) } }
     }
 
     fun export(uri: Uri) {

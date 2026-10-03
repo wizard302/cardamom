@@ -42,6 +42,10 @@
     <string name="queue_open">Open queue</string>
     <string name="queue_reorder">Reorder</string>
     <string name="queue_now_playing">Now playing</string>
+    <string name="removed_from_queue">Removed from queue</string>
+    <string name="removed_from_playlist">Removed from playlist</string>
+    <string name="removed_from_favorites">Removed from favorites</string>
+    <string name="action_undo">Undo</string>
     <string name="action_more">More</string>
 
     <string name="menu_play">Play</string>

@@ -60,7 +60,11 @@ class PlaylistRepository @Inject constructor(
         return id
     }
 
-    suspend fun removeTrack(rowId: Long) = playlistDao.deleteTrack(rowId)
+    /** Removes a playlist row; the returned row can be passed to [restoreTrack]. */
+    suspend fun removeTrack(rowId: Long): PlaylistTrackEntity? = playlistDao.takeTrack(rowId)
+
+    /** Puts a removed row back with its original id and position. */
+    suspend fun restoreTrack(row: PlaylistTrackEntity) = playlistDao.insertTrack(row)
 
     /** Persists a new order given the row ids in their intended sequence. */
     suspend fun persistOrder(orderedRowIds: List<Long>) =
@@ -74,7 +78,11 @@ class PlaylistRepository @Inject constructor(
         }
     }
 
-    suspend fun removeFavorite(mediaId: Long) = favoriteDao.remove(mediaId)
+    /** Removes a favorite; the returned entry can be passed to [restoreFavorite]. */
+    suspend fun removeFavorite(mediaId: Long): FavoriteEntity? = favoriteDao.take(mediaId)
+
+    /** Puts a removed favorite back, keeping its original date (and so its place). */
+    suspend fun restoreFavorite(favorite: FavoriteEntity) = favoriteDao.add(favorite)
 
     suspend fun toggleFavorite(
         mediaId: Long,

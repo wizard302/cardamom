@@ -244,6 +244,27 @@ class PlayerConnection @Inject constructor(
     }
 
     /**
+     * Puts back a queue item removed with [removeQueueItem]: [index] is its old
+     * timeline index, [playPosition] its old position in the play order.
+     */
+    @OptIn(UnstableApi::class)
+    fun restoreQueueItem(item: MediaItem, index: Int, playPosition: Int) = withController {
+        val command = SessionCommand(COMMAND_QUEUE_RESTORE, Bundle.EMPTY)
+        if (isSessionCommandAvailable(command)) {
+            sendCustomCommand(
+                command,
+                Bundle().apply {
+                    putBundle(EXTRA_ITEM, item.toBundleIncludeLocalConfiguration())
+                    putInt(EXTRA_INDEX, index)
+                    putInt(EXTRA_TO, playPosition)
+                },
+            )
+        } else {
+            addMediaItem(index.coerceIn(0, mediaItemCount), item)
+        }
+    }
+
+    /**
      * Moves a queue item between two positions of the play order (see [queue]).
      * With shuffle on, the service rearranges the shuffle order rather than the
      * timeline, which would have no audible effect.

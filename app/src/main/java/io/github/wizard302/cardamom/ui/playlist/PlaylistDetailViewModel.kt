@@ -5,6 +5,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.wizard302.cardamom.data.db.PlaylistEntity
+import io.github.wizard302.cardamom.data.db.PlaylistTrackEntity
 import io.github.wizard302.cardamom.data.media.LibraryRepository
 import io.github.wizard302.cardamom.data.playlist.M3uEntry
 import io.github.wizard302.cardamom.data.playlist.M3uIo
@@ -12,6 +13,8 @@ import io.github.wizard302.cardamom.data.playlist.PlaylistRepository
 import io.github.wizard302.cardamom.playback.PlayerConnection
 import io.github.wizard302.cardamom.util.repairMojibake
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -69,8 +72,16 @@ class PlaylistDetailViewModel @Inject constructor(
         playerConnection.playQueue(playable.mapNotNull { it.track }, startIndex)
     }
 
+    /** Removed rows by id, kept so a removal can be undone from the snackbar. */
+    private val removed = mutableMapOf<Long, Deferred<PlaylistTrackEntity?>>()
+
     fun removeTrack(rowId: Long) {
-        viewModelScope.launch { repository.removeTrack(rowId) }
+        removed[rowId] = viewModelScope.async { repository.removeTrack(rowId) }
+    }
+
+    fun undoRemove(rowId: Long) {
+        val pending = removed.remove(rowId) ?: return
+        viewModelScope.launch { pending.await()?.let { repository.restoreTrack(it) } }
     }
 
     fun persistOrder(orderedRowIds: List<Long>) {

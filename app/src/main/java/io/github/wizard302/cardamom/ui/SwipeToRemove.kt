@@ -12,6 +12,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -27,6 +30,24 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+
+/**
+ * Shows "[message] · [actionLabel]" for a removal and calls [onUndo] if the
+ * action is tapped. A newer removal replaces the snackbar of an older one.
+ */
+suspend fun SnackbarHostState.showUndo(
+    message: String,
+    actionLabel: String,
+    onUndo: () -> Unit,
+) {
+    currentSnackbarData?.dismiss()
+    val result = showSnackbar(
+        message = message,
+        actionLabel = actionLabel,
+        duration = SnackbarDuration.Short,
+    )
+    if (result == SnackbarResult.ActionPerformed) onUndo()
+}
 
 /** Share of the row width a swipe must cover before letting go removes it. */
 private const val REMOVE_THRESHOLD = 0.5f

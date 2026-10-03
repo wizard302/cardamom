@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -20,6 +21,14 @@ interface FavoriteDao {
 
     @Query("DELETE FROM favorites WHERE mediaId = :mediaId")
     suspend fun remove(mediaId: Long)
+
+    @Query("SELECT * FROM favorites WHERE mediaId = :mediaId")
+    suspend fun get(mediaId: Long): FavoriteEntity?
+
+    /** Deletes the favorite and returns it, so the removal can be undone. */
+    @Transaction
+    suspend fun take(mediaId: Long): FavoriteEntity? =
+        get(mediaId)?.also { remove(mediaId) }
 
     @Query("SELECT EXISTS(SELECT 1 FROM favorites WHERE mediaId = :mediaId)")
     suspend fun isFavorite(mediaId: Long): Boolean

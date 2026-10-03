@@ -127,8 +127,39 @@ class PlaybackService : MediaSessionService() {
         mediaSession?.player?.let { PlayerWidget.update(this, it) }
     }
 
-    private val customCommands = listOf(COMMAND_ENQUEUE, COMMAND_QUEUE_REMOVE, COMMAND_QUEUE_MOVE)
-        .map { SessionCommand(it, Bundle.EMPTY) }
+    private val customCommands = listOf(
+        COMMAND_ENQUEUE,
+        COMMAND_QUEUE_REMOVE,
+        COMMAND_QUEUE_MOVE,
+        COMMAND_QUEUE_RESTORE,
+    ).map { SessionCommand(it, Bundle.EMPTY) }
+
+    /**
+     * Set when a controller replaces the whole queue; the resulting timeline
+     * change then puts the starting track at the head of the shuffle order.
+     */
+    private var frontCurrentOnNewQueue = false
+
+    /**
+     * Keeps the shuffled order starting at the current track whenever shuffle is
+     * switched on or a new queue starts, so the queue list reads top-down from
+     * "now playing" instead of having the current track buried in the middle.
+     */
+    private val shuffleListener = object : Player.Listener {
+        override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
+            if (shuffleModeEnabled) moveCurrentToShuffleFront()
+        }
+
+        override fun onTimelineChanged(timeline: Timeline, reason: Int) {
+            if (reason != Player.TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED) return
+            // Consume the flag on the first playlist change either way, so a
+            // later queue edit never reshuffles tracks that already played.
+            if (frontCurrentOnNewQueue) {
+                frontCurrentOnNewQueue = false
+                moveCurrentToShuffleFront()
+            }
+        }
+    }
 
     private val sessionCallback = object : MediaSession.Callback {
         @OptIn(UnstableApi::class)
@@ -143,6 +174,24 @@ class PlaybackService : MediaSessionService() {
                         .build(),
                 )
                 .build()
+
+        @OptIn(UnstableApi::class)
+        override fun onSetMediaItems(
+            mediaSession: MediaSession,
+            controller: MediaSession.ControllerInfo,
+            mediaItems: MutableList<MediaItem>,
+            startIndex: Int,
+            startPositionMs: Long,
+        ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
+            frontCurrentOnNewQueue = true
+            return super.onSetMediaItems(
+                mediaSession,
+                controller,
+                mediaItems,
+                startIndex,
+                startPositionMs,
+            )
+        }
 
         @OptIn(UnstableApi::class)
         override fun onCustomCommand(
@@ -168,6 +217,16 @@ class PlaybackService : MediaSessionService() {
                     from = args.getInt(EXTRA_FROM, C.INDEX_UNSET),
                     to = args.getInt(EXTRA_TO, C.INDEX_UNSET),
                 )
+                COMMAND_QUEUE_RESTORE -> {
+                    val item = args.getBundle(EXTRA_ITEM)?.let { MediaItem.fromBundle(it) }
+                    if (item != null) {
+                        restoreQueueItem(
+                            item = item,
+                            index = args.getInt(EXTRA_INDEX, C.INDEX_UNSET),
+                            playPosition = args.getInt(EXTRA_TO, C.INDEX_UNSET),
+                        )
+                    }
+                }
                 else -> return Futures.immediateFuture(
                     SessionResult(SessionError.ERROR_NOT_SUPPORTED),
                 )
@@ -191,7 +250,7 @@ class PlaybackService : MediaSessionService() {
             player.mediaItemCount
         }
         player.addMediaItems(insertAt, items)
-        applyShuffleReorder(insertAt, items.size, next)
+        if (wasEmpty) moveCurrentToShuffleFront() else applyShuffleReorder(insertAt, items.size, next)
         if (player.playbackState == Player.STATE_IDLE) player.prepare()
         if (wasEmpty) player.play()
     }
@@ -237,6 +296,43 @@ class PlaybackService : MediaSessionService() {
         )
     }
 
+    /** Undoes a queue removal, putting [item] back where it was in both orders. */
+    @OptIn(UnstableApi::class)
+    private fun restoreQueueItem(item: MediaItem, index: Int, playPosition: Int) {
+        val player = mediaSession?.player as? ExoPlayer ?: return
+        val wasEmpty = player.mediaItemCount == 0
+        val insertAt = index.coerceIn(0, player.mediaItemCount)
+        player.addMediaItem(insertAt, item)
+        if (player.shuffleModeEnabled) {
+            val play = shufflePlayOrder(player)
+            val from = play?.indexOf(insertAt) ?: -1
+            val reordered = play?.let {
+                moveInShuffle(it, from, playPosition.coerceIn(0, it.lastIndex))
+            }
+            if (reordered != null) {
+                player.setShuffleOrder(
+                    ShuffleOrder.DefaultShuffleOrder(reordered, System.nanoTime()),
+                )
+            }
+        }
+        if (player.playbackState == Player.STATE_IDLE) player.prepare()
+        if (wasEmpty) player.play()
+    }
+
+    /** Rewrites the shuffle order so it starts at the current track. */
+    @OptIn(UnstableApi::class)
+    private fun moveCurrentToShuffleFront() {
+        val player = mediaSession?.player as? ExoPlayer ?: return
+        if (!player.shuffleModeEnabled) return
+        val play = shufflePlayOrder(player) ?: return
+        val from = play.indexOf(player.currentMediaItemIndex)
+        if (from <= 0) return
+        val reordered = moveInShuffle(play, from, 0) ?: return
+        player.setShuffleOrder(
+            ShuffleOrder.DefaultShuffleOrder(reordered, System.nanoTime()),
+        )
+    }
+
     /** The shuffled play order as timeline indices, or null if out of sync. */
     @OptIn(UnstableApi::class)
     private fun shufflePlayOrder(player: ExoPlayer): List<Int>? {
@@ -268,6 +364,7 @@ class PlaybackService : MediaSessionService() {
             .build()
         player.addListener(persistListener)
         player.addListener(sleepTimerListener)
+        player.addListener(shuffleListener)
 
         // Pin a stable audio session id up front so the equalizer can attach even
         // before playback starts, then hand it to the effects controller.

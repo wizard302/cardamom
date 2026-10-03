@@ -60,6 +60,17 @@ interface PlaylistDao {
     @Query("DELETE FROM playlist_tracks WHERE id = :rowId")
     suspend fun deleteTrack(rowId: Long)
 
+    @Query("SELECT * FROM playlist_tracks WHERE id = :rowId")
+    suspend fun getTrack(rowId: Long): PlaylistTrackEntity?
+
+    @Insert
+    suspend fun insertTrack(track: PlaylistTrackEntity)
+
+    /** Deletes the row and returns it, so the removal can be undone. */
+    @Transaction
+    suspend fun takeTrack(rowId: Long): PlaylistTrackEntity? =
+        getTrack(rowId)?.also { deleteTrack(rowId) }
+
     @Query("UPDATE playlist_tracks SET position = :position WHERE id = :rowId")
     suspend fun setPosition(rowId: Long, position: Int)
 

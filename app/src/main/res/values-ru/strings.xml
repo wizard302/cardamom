@@ -38,6 +38,10 @@
     <string name="queue_open">Открыть очередь</string>
     <string name="queue_reorder">Переместить</string>
     <string name="queue_now_playing">Сейчас играет</string>
+    <string name="removed_from_queue">Удалено из очереди</string>
+    <string name="removed_from_playlist">Удалено из плейлиста</string>
+    <string name="removed_from_favorites">Удалено из избранного</string>
+    <string name="action_undo">Отменить</string>
     <string name="action_more">Ещё</string>
 
     <string name="menu_play">Воспроизвести</string>

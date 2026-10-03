@@ -2,12 +2,14 @@ package io.github.wizard302.cardamom.ui.player
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.media3.common.MediaItem
 import io.github.wizard302.cardamom.data.playlist.PlaylistRepository
 import io.github.wizard302.cardamom.data.settings.SettingsRepository
 import io.github.wizard302.cardamom.playback.EXTRA_PATH
 import io.github.wizard302.cardamom.playback.MAX_SPEED
 import io.github.wizard302.cardamom.playback.MIN_SPEED
 import io.github.wizard302.cardamom.playback.PlayerConnection
+import io.github.wizard302.cardamom.playback.QueueSlot
 import io.github.wizard302.cardamom.playback.SleepTimerController
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
@@ -37,7 +39,7 @@ class PlayerViewModel @Inject constructor(
     val shuffleEnabled = connection.shuffleEnabled
     val repeatMode = connection.repeatMode
     val queuePosition = connection.queuePosition
-    val queue = connection.queue
+    val queue: StateFlow<List<QueueSlot>> = connection.queue
     val currentIndex = connection.currentIndex
     val currentItem = connection.currentItem
     val speed = connection.speed
@@ -81,6 +83,8 @@ class PlayerViewModel @Inject constructor(
     fun cycleRepeatMode() = connection.cycleRepeatMode()
     fun seekToQueueItem(index: Int) = connection.seekToQueueItem(index)
     fun removeQueueItem(index: Int) = connection.removeQueueItem(index)
+    fun restoreQueueItem(item: MediaItem, index: Int, playPosition: Int) =
+        connection.restoreQueueItem(item, index, playPosition)
     fun moveQueueItem(from: Int, to: Int) = connection.moveQueueItem(from, to)
 
     /** Toggles Favorites membership for the currently playing track. */
