@@ -5,6 +5,7 @@ import android.content.Context
 import android.os.Bundle
 import androidx.annotation.OptIn
 import androidx.core.content.ContextCompat
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
@@ -60,11 +61,15 @@ class PlayerConnection @Inject constructor(
     private val _queuePosition = MutableStateFlow(0 to 0)
     val queuePosition: StateFlow<Pair<Int, Int>> = _queuePosition.asStateFlow()
 
-    /** Current queue as MediaItems, in playback order. */
-    private val _queue = MutableStateFlow<List<MediaItem>>(emptyList())
-    val queue: StateFlow<List<MediaItem>> = _queue.asStateFlow()
+    /**
+     * Current queue in the order it will actually play — the shuffled order
+     * when shuffle is on. Each slot carries its timeline index, which is what
+     * seeking and removal take.
+     */
+    private val _queue = MutableStateFlow<List<QueueSlot>>(emptyList())
+    val queue: StateFlow<List<QueueSlot>> = _queue.asStateFlow()
 
-    /** Index of the item currently playing, -1 when the queue is empty. */
+    /** Timeline index of the item currently playing, -1 when the queue is empty. */
     private val _currentIndex = MutableStateFlow(-1)
     val currentIndex: StateFlow<Int> = _currentIndex.asStateFlow()
 
@@ -88,6 +93,7 @@ class PlayerConnection @Inject constructor(
 
         override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
             _shuffleEnabled.value = shuffleModeEnabled
+            updateQueue()
         }
 
         override fun onRepeatModeChanged(repeatMode: Int) {
@@ -141,7 +147,17 @@ class PlayerConnection @Inject constructor(
 
     private fun updateQueue() {
         controller?.let { c ->
-            _queue.value = List(c.mediaItemCount) { i -> c.getMediaItemAt(i) }
+            // The session ships the shuffle order inside the timeline, so walking
+            // it with the shuffle flag yields the real play order.
+            val timeline = c.currentTimeline
+            val shuffle = c.shuffleModeEnabled
+            val slots = ArrayList<QueueSlot>(timeline.windowCount)
+            var i = timeline.getFirstWindowIndex(shuffle)
+            while (i != C.INDEX_UNSET && slots.size < timeline.windowCount) {
+                slots += QueueSlot(index = i, item = c.getMediaItemAt(i))
+                i = timeline.getNextWindowIndex(i, Player.REPEAT_MODE_OFF, shuffle)
+            }
+            _queue.value = slots
         }
     }
 
@@ -212,9 +228,41 @@ class PlayerConnection @Inject constructor(
         play()
     }
 
-    fun removeQueueItem(index: Int) = withController { removeMediaItem(index) }
+    /**
+     * Removes the item at timeline [index]. Done by the service when possible:
+     * the controller's own removal shows an unshuffled placeholder timeline
+     * until the session answers, which makes a shuffled queue list jump.
+     */
+    @OptIn(UnstableApi::class)
+    fun removeQueueItem(index: Int) = withController {
+        val command = SessionCommand(COMMAND_QUEUE_REMOVE, Bundle.EMPTY)
+        if (isSessionCommandAvailable(command)) {
+            sendCustomCommand(command, Bundle().apply { putInt(EXTRA_INDEX, index) })
+        } else {
+            removeMediaItem(index)
+        }
+    }
 
-    fun moveQueueItem(from: Int, to: Int) = withController { moveMediaItem(from, to) }
+    /**
+     * Moves a queue item between two positions of the play order (see [queue]).
+     * With shuffle on, the service rearranges the shuffle order rather than the
+     * timeline, which would have no audible effect.
+     */
+    @OptIn(UnstableApi::class)
+    fun moveQueueItem(from: Int, to: Int) = withController {
+        val command = SessionCommand(COMMAND_QUEUE_MOVE, Bundle.EMPTY)
+        if (isSessionCommandAvailable(command)) {
+            sendCustomCommand(
+                command,
+                Bundle().apply {
+                    putInt(EXTRA_FROM, from)
+                    putInt(EXTRA_TO, to)
+                },
+            )
+        } else if (!shuffleModeEnabled) {
+            moveMediaItem(from, to)
+        }
+    }
 
     fun togglePlayPause() = withController { if (isPlaying) pause() else play() }
 
@@ -242,3 +290,6 @@ class PlayerConnection @Inject constructor(
         }
     }
 }
+
+/** One queue entry: [index] is its position in the player timeline. */
+data class QueueSlot(val index: Int, val item: MediaItem)

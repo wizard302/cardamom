@@ -57,4 +57,17 @@ class ShuffleReorderTest {
     fun `an empty insertion is rejected`() {
         assertNull(reorderShuffle(listOf(0, 1), insertAt = 1, count = 0, current = 0, next = true))
     }
+
+    @Test
+    fun `moving in the shuffled order shifts the entries in between`() {
+        val order = listOf(4, 2, 0, 3, 1)
+        assertArrayEquals(intArrayOf(2, 0, 4, 3, 1), moveInShuffle(order, from = 0, to = 2))
+        assertArrayEquals(intArrayOf(4, 1, 2, 0, 3), moveInShuffle(order, from = 4, to = 1))
+    }
+
+    @Test
+    fun `out-of-range move is rejected`() {
+        assertNull(moveInShuffle(listOf(0, 1), from = 0, to = 2))
+        assertNull(moveInShuffle(listOf(0, 1), from = -1, to = 0))
+    }
 }

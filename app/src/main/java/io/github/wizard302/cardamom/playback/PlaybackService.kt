@@ -127,7 +127,8 @@ class PlaybackService : MediaSessionService() {
         mediaSession?.player?.let { PlayerWidget.update(this, it) }
     }
 
-    private val enqueueCommand = SessionCommand(COMMAND_ENQUEUE, Bundle.EMPTY)
+    private val customCommands = listOf(COMMAND_ENQUEUE, COMMAND_QUEUE_REMOVE, COMMAND_QUEUE_MOVE)
+        .map { SessionCommand(it, Bundle.EMPTY) }
 
     private val sessionCallback = object : MediaSession.Callback {
         @OptIn(UnstableApi::class)
@@ -138,7 +139,7 @@ class PlaybackService : MediaSessionService() {
             MediaSession.ConnectionResult.AcceptedResultBuilder(session)
                 .setAvailableSessionCommands(
                     MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon()
-                        .add(enqueueCommand)
+                        .apply { customCommands.forEach { add(it) } }
                         .build(),
                 )
                 .build()
@@ -150,13 +151,27 @@ class PlaybackService : MediaSessionService() {
             customCommand: SessionCommand,
             args: Bundle,
         ): ListenableFuture<SessionResult> {
-            if (customCommand.customAction != COMMAND_ENQUEUE) {
-                return Futures.immediateFuture(SessionResult(SessionError.ERROR_NOT_SUPPORTED))
+            when (customCommand.customAction) {
+                COMMAND_ENQUEUE -> {
+                    val items = BundleCompat
+                        .getParcelableArrayList(args, EXTRA_ITEMS, Bundle::class.java)
+                        ?.map { MediaItem.fromBundle(it) }
+                        .orEmpty()
+                    enqueue(items, next = args.getBoolean(EXTRA_PLAY_NEXT, true))
+                }
+                COMMAND_QUEUE_REMOVE -> {
+                    val player = session.player
+                    val index = args.getInt(EXTRA_INDEX, C.INDEX_UNSET)
+                    if (index in 0 until player.mediaItemCount) player.removeMediaItem(index)
+                }
+                COMMAND_QUEUE_MOVE -> moveQueueItem(
+                    from = args.getInt(EXTRA_FROM, C.INDEX_UNSET),
+                    to = args.getInt(EXTRA_TO, C.INDEX_UNSET),
+                )
+                else -> return Futures.immediateFuture(
+                    SessionResult(SessionError.ERROR_NOT_SUPPORTED),
+                )
             }
-            val items = BundleCompat.getParcelableArrayList(args, EXTRA_ITEMS, Bundle::class.java)
-                ?.map { MediaItem.fromBundle(it) }
-                .orEmpty()
-            enqueue(items, next = args.getBoolean(EXTRA_PLAY_NEXT, true))
             return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
         }
     }
@@ -189,15 +204,7 @@ class PlaybackService : MediaSessionService() {
     private fun applyShuffleReorder(insertAt: Int, count: Int, next: Boolean) {
         val player = mediaSession?.player as? ExoPlayer ?: return
         if (!player.shuffleModeEnabled || insertAt < 0 || count <= 0) return
-        val order = player.shuffleOrder
-        if (order.length != player.mediaItemCount) return
-        val play = buildList {
-            var i = order.firstIndex
-            while (i != C.INDEX_UNSET) {
-                add(i)
-                i = order.getNextIndex(i)
-            }
-        }
+        val play = shufflePlayOrder(player) ?: return
         val reordered = reorderShuffle(
             order = play,
             insertAt = insertAt,
@@ -208,6 +215,40 @@ class PlaybackService : MediaSessionService() {
         player.setShuffleOrder(
             ShuffleOrder.DefaultShuffleOrder(reordered, System.nanoTime()),
         )
+    }
+
+    /**
+     * Moves a queue item between play-order positions. With shuffle on, the
+     * timeline is left alone and the shuffle order is rewritten instead.
+     */
+    @OptIn(UnstableApi::class)
+    private fun moveQueueItem(from: Int, to: Int) {
+        val player = mediaSession?.player as? ExoPlayer ?: return
+        val count = player.mediaItemCount
+        if (from !in 0 until count || to !in 0 until count || from == to) return
+        if (!player.shuffleModeEnabled) {
+            player.moveMediaItem(from, to)
+            return
+        }
+        val play = shufflePlayOrder(player) ?: return
+        val reordered = moveInShuffle(play, from, to) ?: return
+        player.setShuffleOrder(
+            ShuffleOrder.DefaultShuffleOrder(reordered, System.nanoTime()),
+        )
+    }
+
+    /** The shuffled play order as timeline indices, or null if out of sync. */
+    @OptIn(UnstableApi::class)
+    private fun shufflePlayOrder(player: ExoPlayer): List<Int>? {
+        val order = player.shuffleOrder
+        if (order.length != player.mediaItemCount) return null
+        return buildList {
+            var i = order.firstIndex
+            while (i != C.INDEX_UNSET) {
+                add(i)
+                i = order.getNextIndex(i)
+            }
+        }
     }
 
     @OptIn(UnstableApi::class)

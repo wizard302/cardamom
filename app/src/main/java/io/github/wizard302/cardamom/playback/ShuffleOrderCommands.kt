@@ -13,6 +13,19 @@ package io.github.wizard302.cardamom.playback
  */
 const val COMMAND_ENQUEUE = "io.github.wizard302.cardamom.ENQUEUE"
 
+/** Removes the queue item at timeline index [EXTRA_INDEX]. */
+const val COMMAND_QUEUE_REMOVE = "io.github.wizard302.cardamom.QUEUE_REMOVE"
+
+/**
+ * Moves a queue item from play-order position [EXTRA_FROM] to [EXTRA_TO]. With
+ * shuffle on this rewrites the shuffle order; otherwise it moves the timeline item.
+ */
+const val COMMAND_QUEUE_MOVE = "io.github.wizard302.cardamom.QUEUE_MOVE"
+
+const val EXTRA_INDEX = "index"
+const val EXTRA_FROM = "from"
+const val EXTRA_TO = "to"
+
 /** ArrayList of bundled MediaItems to enqueue. */
 const val EXTRA_ITEMS = "items"
 
@@ -46,4 +59,13 @@ fun reorderShuffle(
         addAll(inserted)
         addAll(rest.subList(anchor + 1, rest.size))
     }.toIntArray()
+}
+
+/**
+ * Returns [order] (a shuffled play order as timeline indices) with the entry at
+ * position [from] moved to position [to], or null if either is out of range.
+ */
+fun moveInShuffle(order: List<Int>, from: Int, to: Int): IntArray? {
+    if (from !in order.indices || to !in order.indices) return null
+    return order.toMutableList().apply { add(to, removeAt(from)) }.toIntArray()
 }

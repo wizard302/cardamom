@@ -3,7 +3,6 @@ package io.github.wizard302.cardamom.ui.player
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -11,7 +10,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material.icons.rounded.VolumeUp
@@ -19,10 +18,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -43,15 +39,26 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.MediaItem
 import io.github.wizard302.cardamom.R
+import io.github.wizard302.cardamom.ui.SwipeToRemove
 
 private val QUEUE_ROW_HEIGHT = 64.dp
 
-/** One queue slot with a stable id so reordering keeps LazyColumn keys stable. */
-private data class QueueEntry(val id: Long, val item: MediaItem, val isCurrent: Boolean)
+/**
+ * One queue row. [id] is the media id plus its occurrence count, so it survives
+ * reordering and removal of other rows; [index] is the timeline index the
+ * player understands.
+ */
+private data class QueueEntry(
+    val id: String,
+    val index: Int,
+    val item: MediaItem,
+    val isCurrent: Boolean,
+)
 
 /**
  * Bottom sheet with the playback queue: tap to jump, drag the handle to
- * reorder, swipe a row away to remove it.
+ * reorder, swipe a row far to the left to remove it.
+ * With shuffle on, rows follow the shuffled play order.
  *
  * Reordering happens on a local copy while dragging and is committed to the
  * player once, on drag end. Mutating the player on every threshold crossing
@@ -67,15 +74,24 @@ fun QueueSheet(
     val currentIndex by viewModel.currentIndex.collectAsStateWithLifecycle()
 
     var entries by remember { mutableStateOf<List<QueueEntry>>(emptyList()) }
-    var draggingId by remember { mutableStateOf<Long?>(null) }
+    var draggingId by remember { mutableStateOf<String?>(null) }
     var dragOffset by remember { mutableFloatStateOf(0f) }
     val rowHeightPx = with(LocalDensity.current) { QUEUE_ROW_HEIGHT.toPx() }
 
     // Rebuild the local list from the player, but never while a drag is in flight.
     LaunchedEffect(flowQueue, currentIndex) {
         if (draggingId == null) {
-            entries = flowQueue.mapIndexed { i, item ->
-                QueueEntry(id = i.toLong(), item = item, isCurrent = i == currentIndex)
+            val seen = HashMap<String, Int>()
+            entries = flowQueue.map { slot ->
+                val mediaId = slot.item.mediaId
+                val n = (seen[mediaId] ?: 0) + 1
+                seen[mediaId] = n
+                QueueEntry(
+                    id = "$mediaId#$n",
+                    index = slot.index,
+                    item = slot.item,
+                    isCurrent = slot.index == currentIndex,
+                )
             }
         }
     }
@@ -87,28 +103,10 @@ fun QueueSheet(
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
         )
         LazyColumn {
-            itemsIndexed(entries, key = { _, e -> e.id }) { index, entry ->
-                val dismissState = rememberSwipeToDismissBoxState(
-                    confirmValueChange = { value ->
-                        if (value != SwipeToDismissBoxValue.Settled) {
-                            viewModel.removeQueueItem(index)
-                            true
-                        } else {
-                            false
-                        }
-                    },
-                )
+            items(entries, key = { it.id }) { entry ->
                 val isDragged = draggingId == entry.id
-                SwipeToDismissBox(
-                    state = dismissState,
-                    backgroundContent = {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(QUEUE_ROW_HEIGHT)
-                                .background(MaterialTheme.colorScheme.errorContainer),
-                        )
-                    },
+                SwipeToRemove(
+                    onRemove = { viewModel.removeQueueItem(entry.index) },
                     modifier = Modifier
                         .zIndex(if (isDragged) 1f else 0f)
                         // Displaced rows glide to their new slot; the dragged row
@@ -120,10 +118,7 @@ fun QueueSheet(
                         title = entry.item.mediaMetadata.title?.toString().orEmpty(),
                         artist = entry.item.mediaMetadata.artist?.toString().orEmpty(),
                         isCurrent = entry.isCurrent,
-                        onClick = {
-                            val pos = entries.indexOfFirst { it.id == entry.id }
-                            if (pos >= 0) viewModel.seekToQueueItem(pos)
-                        },
+                        onClick = { viewModel.seekToQueueItem(entry.index) },
                         dragModifier = Modifier.pointerInput(entry.id) {
                             var from = -1
                             detectDragGestures(
