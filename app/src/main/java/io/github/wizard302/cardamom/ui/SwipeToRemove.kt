@@ -1,7 +1,7 @@
 package io.github.wizard302.cardamom.ui
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animate
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
@@ -17,9 +17,9 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -29,7 +29,6 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.launch
 
 /**
  * Shows "[message] · [actionLabel]" for a removal and calls [onUndo] if the
@@ -66,18 +65,18 @@ fun SwipeToRemove(
     content: @Composable () -> Unit,
 ) {
     val currentOnRemove by rememberUpdatedState(onRemove)
-    val scope = rememberCoroutineScope()
     val haptics = LocalHapticFeedback.current
-    val offset = remember { Animatable(0f) }
+    // Plain state, updated synchronously on every drag delta: deltas arrive
+    // faster than frames, so deferring the write would drop most of them.
+    var offset by remember { mutableFloatStateOf(0f) }
     var width by remember { mutableIntStateOf(0) }
     val threshold = width * REMOVE_THRESHOLD
-    val armed = width > 0 && -offset.value >= threshold
+    val armed = width > 0 && -offset >= threshold
 
     val dragState = rememberDraggableState { delta ->
-        val wasArmed = -offset.value >= threshold
-        val next = (offset.value + delta).coerceIn(-width.toFloat(), 0f)
-        scope.launch { offset.snapTo(next) }
-        if (width > 0 && wasArmed != (-next >= threshold)) {
+        val wasArmed = -offset >= threshold
+        offset = (offset + delta).coerceIn(-width.toFloat(), 0f)
+        if (width > 0 && wasArmed != (-offset >= threshold)) {
             haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
         }
     }
@@ -92,7 +91,7 @@ fun SwipeToRemove(
     )
 
     Box(modifier = modifier.onSizeChanged { width = it.width }) {
-        if (offset.value < 0f) {
+        if (offset < 0f) {
             Box(
                 modifier = Modifier
                     .matchParentSize()
@@ -109,17 +108,17 @@ fun SwipeToRemove(
         }
         Box(
             modifier = Modifier
-                .graphicsLayer { translationX = offset.value }
+                .graphicsLayer { translationX = offset }
                 .draggable(
                     state = dragState,
                     orientation = Orientation.Horizontal,
                     onDragStopped = {
-                        if (width > 0 && -offset.value >= threshold) {
-                            offset.animateTo(-width.toFloat())
-                            currentOnRemove()
-                        } else {
-                            offset.animateTo(0f)
+                        val remove = width > 0 && -offset >= threshold
+                        val target = if (remove) -width.toFloat() else 0f
+                        animate(initialValue = offset, targetValue = target) { value, _ ->
+                            offset = value
                         }
+                        if (remove) currentOnRemove()
                     },
                 ),
         ) {
