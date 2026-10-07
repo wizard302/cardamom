@@ -3,6 +3,7 @@ package io.github.wizard302.cardamom.playback
 import android.content.ComponentName
 import android.content.Context
 import android.os.Bundle
+import android.util.Log
 import androidx.annotation.OptIn
 import androidx.core.content.ContextCompat
 import androidx.media3.common.C
@@ -121,13 +122,38 @@ class PlayerConnection @Inject constructor(
         }
     }
 
+    /** True while a connection attempt is in flight, so it isn't started twice. */
+    private var connecting = false
+
+    /**
+     * Drops a controller whose session went away (the service crashed or was
+     * killed), so the next call reconnects instead of talking to a dead binder.
+     */
+    private val controllerListener = object : MediaController.Listener {
+        override fun onDisconnected(controller: MediaController) {
+            if (this@PlayerConnection.controller !== controller) return
+            controller.removeListener(listener)
+            this@PlayerConnection.controller = null
+            _connected.value = false
+            _isPlaying.value = false
+        }
+    }
+
     fun connect() {
-        if (controller != null) return
+        if (controller != null || connecting) return
+        connecting = true
         val token = SessionToken(context, ComponentName(context, PlaybackService::class.java))
-        val future = MediaController.Builder(context, token).buildAsync()
+        val future = MediaController.Builder(context, token)
+            .setListener(controllerListener)
+            .buildAsync()
         future.addListener(
             {
-                val c = future.get()
+                connecting = false
+                val c = runCatching { future.get() }.getOrElse { e ->
+                    // Left disconnected; the next player action retries.
+                    Log.w(TAG, "Could not connect to the playback service", e)
+                    return@addListener
+                }
                 controller = c
                 c.addListener(listener)
                 // Sync initial state.
@@ -172,7 +198,13 @@ class PlayerConnection @Inject constructor(
     fun currentPositionMs(): Long = controller?.currentPosition ?: 0L
 
     private inline fun withController(action: MediaController.() -> Unit) {
-        controller?.action()
+        val c = controller
+        if (c == null) {
+            // Lost the session earlier; reconnect so the next tap works.
+            connect()
+            return
+        }
+        c.action()
     }
 
     fun playQueue(tracks: List<Track>, startIndex: Int) = withController {
@@ -314,3 +346,5 @@ class PlayerConnection @Inject constructor(
 
 /** One queue entry: [index] is its position in the player timeline. */
 data class QueueSlot(val index: Int, val item: MediaItem)
+
+private const val TAG = "Cardamom"
