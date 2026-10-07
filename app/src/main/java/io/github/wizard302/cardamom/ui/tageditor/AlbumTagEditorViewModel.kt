@@ -134,7 +134,12 @@ class AlbumTagEditorViewModel @Inject constructor(
     private suspend fun applyToAllTracks(s: AlbumTagState): Boolean {
         var allOk = true
         for (track in tracks) {
-            val base = tagRepository.read(track.contentUri)?.tags ?: continue
+            val base = tagRepository.read(track.contentUri)?.tags
+            if (base == null) {
+                // An unreadable file stays unchanged; don't report success for it.
+                allOk = false
+                continue
+            }
             val merged = base.copy(
                 album = if (s.applyAlbum) s.album else base.album,
                 albumArtist = if (s.applyAlbumArtist) s.albumArtist else base.albumArtist,

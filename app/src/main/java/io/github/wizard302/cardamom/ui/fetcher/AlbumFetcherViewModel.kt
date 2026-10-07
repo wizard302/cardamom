@@ -197,7 +197,12 @@ class AlbumFetcherViewModel @Inject constructor(
     ): Boolean {
         var allOk = true
         albumTracks.forEachIndexed { i, track ->
-            val base = tagRepository.read(track.contentUri)?.tags ?: return@forEachIndexed
+            val base = tagRepository.read(track.contentUri)?.tags
+            if (base == null) {
+                // An unreadable file stays unchanged; don't report success for it.
+                allOk = false
+                return@forEachIndexed
+            }
             val releaseTitle = release.tracks.getOrNull(i)?.title
             val merged = base.copy(
                 album = if (s.applyAlbum) release.title else base.album,
