@@ -2,7 +2,6 @@ package io.github.wizard302.cardamom.ui.tageditor
 
 import android.content.Context
 import android.content.IntentSender
-import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -11,6 +10,7 @@ import io.github.wizard302.cardamom.data.tags.CoverEdit
 import io.github.wizard302.cardamom.data.tags.TagRepository
 import io.github.wizard302.cardamom.data.tags.TrackTags
 import io.github.wizard302.cardamom.data.tags.writeWithScopedConsent
+import io.github.wizard302.cardamom.util.invalidateArtworkCache
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CompletableDeferred
@@ -123,7 +123,7 @@ class TagEditorViewModel @Inject constructor(
             )
             if (ok) {
                 tagRepository.notifyFileChanged(saved.path)
-                invalidateArtworkCache(saved.albumArtUri)
+                context.invalidateArtworkCache(saved.albumArtUri)
                 libraryRepository.refresh()
             }
             _state.update { it.copy(saving = false) }
@@ -136,14 +136,5 @@ class TagEditorViewModel @Inject constructor(
         consent = deferred
         _events.emit(TagEditorEvent.RequestConsent(sender))
         return deferred.await()
-    }
-
-    private fun invalidateArtworkCache(artworkUri: Uri) {
-        runCatching {
-            val loader = coil3.SingletonImageLoader.get(context)
-            val key = artworkUri.toString()
-            loader.memoryCache?.remove(coil3.memory.MemoryCache.Key(key))
-            loader.diskCache?.remove(key)
-        }
     }
 }

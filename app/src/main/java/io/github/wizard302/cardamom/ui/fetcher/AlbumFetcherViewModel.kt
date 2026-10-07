@@ -14,10 +14,13 @@ import io.github.wizard302.cardamom.data.tags.CoverEdit
 import io.github.wizard302.cardamom.data.tags.sniffImageMime
 import io.github.wizard302.cardamom.data.tags.TagRepository
 import io.github.wizard302.cardamom.data.tags.writeWithScopedConsent
+import io.github.wizard302.cardamom.util.invalidateArtworkCache
 import io.github.wizard302.cardamom.ui.tageditor.TagEditorEvent
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -117,11 +120,20 @@ class AlbumFetcherViewModel @Inject constructor(
         }
     }
 
+    /**
+     * The release being loaded. Cancelled when another one is picked or the
+     * user goes back, so a slow cover for the previous pick cannot land on top.
+     */
+    private var releaseJob: Job? = null
+
     fun selectRelease(candidate: AlbumCandidate) {
         _state.update { it.copy(releaseLoading = true, coverLoading = true, cover = null) }
-        viewModelScope.launch {
+        releaseJob?.cancel()
+        releaseJob = viewModelScope.launch {
             val detail = runCatching { metadataRepository.getAlbumRelease(candidate.releaseMbid) }
                 .getOrNull()
+            // runCatching also swallows the cancellation of a superseded pick.
+            ensureActive()
             if (detail == null) {
                 _state.update { it.copy(releaseLoading = false, coverLoading = false) }
                 _events.emit(TagEditorEvent.Error)
@@ -151,7 +163,18 @@ class AlbumFetcherViewModel @Inject constructor(
         }
     }
 
-    fun backToResults() = _state.update { it.copy(release = null, cover = null, previews = emptyList()) }
+    fun backToResults() {
+        releaseJob?.cancel()
+        _state.update {
+            it.copy(
+                release = null,
+                releaseLoading = false,
+                cover = null,
+                coverLoading = false,
+                previews = emptyList(),
+            )
+        }
+    }
 
     fun toggleAlbum(on: Boolean) = _state.update { it.copy(applyAlbum = on) }
     fun toggleAlbumArtist(on: Boolean) = _state.update { it.copy(applyAlbumArtist = on) }
@@ -183,6 +206,9 @@ class AlbumFetcherViewModel @Inject constructor(
             )
             if (ok) {
                 albumTracks.forEach { tagRepository.notifyFileChanged(it.path) }
+                if (coverEdit != CoverEdit.Keep) {
+                    albumTracks.map { it.albumArtUri }.distinct().forEach { context.invalidateArtworkCache(it) }
+                }
                 libraryRepository.refresh()
             }
             _state.update { it.copy(saving = false) }

@@ -10,6 +10,7 @@ import io.github.wizard302.cardamom.data.media.Track
 import io.github.wizard302.cardamom.data.tags.CoverEdit
 import io.github.wizard302.cardamom.data.tags.TagRepository
 import io.github.wizard302.cardamom.data.tags.writeWithScopedConsent
+import io.github.wizard302.cardamom.util.invalidateArtworkCache
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CompletableDeferred
@@ -124,6 +125,9 @@ class AlbumTagEditorViewModel @Inject constructor(
             )
             if (ok) {
                 tracks.forEach { tagRepository.notifyFileChanged(it.path) }
+                if (s.coverEdit != CoverEdit.Keep) {
+                    tracks.map { it.albumArtUri }.distinct().forEach { context.invalidateArtworkCache(it) }
+                }
                 libraryRepository.refresh()
             }
             _state.update { it.copy(saving = false) }
