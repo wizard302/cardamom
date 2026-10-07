@@ -176,14 +176,22 @@ class PlaybackService : MediaSessionService() {
         override fun onConnect(
             session: MediaSession,
             controller: MediaSession.ControllerInfo,
-        ): MediaSession.ConnectionResult =
-            MediaSession.ConnectionResult.AcceptedResultBuilder(session)
+        ): MediaSession.ConnectionResult {
+            // The queue commands carry full MediaItems including their uris, which
+            // the standard commands never accept from other processes. Only our
+            // own UI and widget get them; system and Bluetooth controllers keep
+            // the defaults.
+            if (controller.packageName != packageName) {
+                return MediaSession.ConnectionResult.AcceptedResultBuilder(session).build()
+            }
+            return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
                 .setAvailableSessionCommands(
                     MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon()
                         .apply { customCommands.forEach { add(it) } }
                         .build(),
                 )
                 .build()
+        }
 
         @OptIn(UnstableApi::class)
         override fun onSetMediaItems(
@@ -210,6 +218,9 @@ class PlaybackService : MediaSessionService() {
             customCommand: SessionCommand,
             args: Bundle,
         ): ListenableFuture<SessionResult> {
+            if (controller.packageName != packageName) {
+                return Futures.immediateFuture(SessionResult(SessionError.ERROR_PERMISSION_DENIED))
+            }
             when (customCommand.customAction) {
                 COMMAND_ENQUEUE -> {
                     val items = BundleCompat
