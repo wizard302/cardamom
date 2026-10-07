@@ -68,4 +68,19 @@ class M3uParserTest {
         assertEquals("rock/a.mp3", entries[0].path)
         assertEquals("../b.mp3", entries[1].path)
     }
+
+    @Test
+    fun `ignores a leading byte order mark`() {
+        val entries = M3uParser.parse("\uFEFF#EXTM3U\n#EXTINF:5,A - B\n/music/a.mp3\n")
+        assertEquals(1, entries.size)
+        assertEquals("/music/a.mp3", entries.first().path)
+        assertEquals("B", entries.first().title)
+    }
+
+    @Test
+    fun `keeps metadata of a first EXTINF behind a byte order mark`() {
+        val entries = M3uParser.parse("\uFEFF#EXTINF:5,A - B\n/music/a.mp3\n")
+        assertEquals(1, entries.size)
+        assertEquals("A", entries.first().artist)
+    }
 }

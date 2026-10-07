@@ -75,7 +75,9 @@ object M3uParser {
         var pendingArtist: String? = null
         var pendingTitle: String? = null
 
-        for (raw in content.lineSequence()) {
+        // Windows tools often prepend a UTF-8 BOM, which trim() leaves in place
+        // and which would turn the header into a bogus path entry.
+        for (raw in content.removePrefix("\uFEFF").lineSequence()) {
             val line = raw.trim()
             when {
                 line.isEmpty() -> Unit
