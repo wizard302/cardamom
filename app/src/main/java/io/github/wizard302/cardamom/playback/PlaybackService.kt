@@ -4,6 +4,7 @@ import android.app.PendingIntent
 import android.content.Intent
 import android.media.AudioManager
 import android.os.Bundle
+import android.util.Log
 import androidx.annotation.OptIn
 import androidx.core.os.BundleCompat
 import androidx.media3.common.AudioAttributes
@@ -28,6 +29,7 @@ import io.github.wizard302.cardamom.data.settings.ReplayGainMode
 import io.github.wizard302.cardamom.data.settings.SettingsRepository
 import io.github.wizard302.cardamom.widget.PlayerWidget
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -70,7 +72,13 @@ class PlaybackService : MediaSessionService() {
 
     private var mediaSession: MediaSession? = null
     private var headphoneWatcher: HeadphoneWatcher? = null
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    // A failing background job (a corrupt DataStore file, a MediaStore query
+    // throwing) must not take the whole playback service down with it.
+    private val scope = CoroutineScope(
+        SupervisorJob() + Dispatchers.Main + CoroutineExceptionHandler { _, e ->
+            Log.e(TAG, "Playback service job failed", e)
+        },
+    )
 
     // Queue edits (especially a bulk "play all") fire many timeline callbacks in
     // a burst; persisting is debounced so DataStore sees one write per burst.
@@ -568,3 +576,5 @@ class PlaybackService : MediaSessionService() {
         super.onDestroy()
     }
 }
+
+private const val TAG = "Cardamom"
