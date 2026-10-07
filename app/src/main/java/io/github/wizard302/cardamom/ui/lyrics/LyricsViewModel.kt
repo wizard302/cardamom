@@ -17,6 +17,7 @@ import io.github.wizard302.cardamom.playback.PlayerConnection
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -27,7 +28,9 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -83,10 +86,21 @@ class LyricsViewModel @Inject constructor(
     }
 
     /** Line index active at the current playback position; -1 before the first. */
+    @OptIn(ExperimentalCoroutinesApi::class)
     val activeLine: StateFlow<Int> =
-        combine(positionTicker(), _lines) { position, lines ->
-            LrcParser.activeIndex(lines, position)
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), -1)
+        combine(connection.isPlaying, _lines) { playing, lines -> playing to lines }
+            .flatMapLatest { (playing, lines) ->
+                if (lines.isEmpty()) {
+                    // Plain or no lyrics: nothing to highlight, so no polling.
+                    flowOf(-1)
+                } else {
+                    // Paused, the position only moves on a seek (a tapped line),
+                    // which a slow tick still picks up.
+                    positionTicker(if (playing) TICK_PLAYING_MS else TICK_PAUSED_MS)
+                        .map { LrcParser.activeIndex(lines, it) }
+                }
+            }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), -1)
 
     private val _events = MutableSharedFlow<LyricsEvent>(extraBufferCapacity = 1)
     val events = _events.asSharedFlow()
@@ -244,10 +258,13 @@ class LyricsViewModel @Inject constructor(
         return if (fromExtras > 0) fromExtras else connection.durationMs.value.coerceAtLeast(0)
     }
 
-    private fun positionTicker() = flow {
+    private fun positionTicker(intervalMs: Long) = flow {
         while (true) {
             emit(connection.currentPositionMs())
-            delay(200)
+            delay(intervalMs)
         }
     }
 }
+
+private const val TICK_PLAYING_MS = 200L
+private const val TICK_PAUSED_MS = 1_000L
