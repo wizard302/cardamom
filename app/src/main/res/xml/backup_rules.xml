@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?><!--
-    Everything is intentionally included in auto-backup (API < 31 path):
-    playlists, favorites, settings and the lyrics cache — nothing sensitive
-    is stored by the app.
+    Auto-backup (API < 31 path): playlists, favorites, settings and the lyrics
+    cache are backed up — nothing sensitive is stored by the app.
+
+    The saved playback queue is left out: it holds MediaStore row ids, which
+    differ on another device or after a reinstall and would restore the wrong
+    tracks.
 -->
-<full-backup-content />
+<full-backup-content>
+    <exclude domain="file" path="datastore/playback_state.preferences_pb" />
+</full-backup-content>
