@@ -34,6 +34,7 @@ class MediaStoreScanner @Inject constructor(
 
     private fun query(selection: String?, selectionArgs: Array<String>?): List<Track> {
         val hasBitrate = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+        val hasAlbumArtist = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
         val projection = buildList {
             add(MediaStore.Audio.Media._ID)
             add(MediaStore.Audio.Media.TITLE)
@@ -48,6 +49,7 @@ class MediaStoreScanner @Inject constructor(
             add(MediaStore.Audio.Media.DATA)
             add(MediaStore.Audio.Media.SIZE)
             if (hasBitrate) add(MediaStore.Audio.Media.BITRATE)
+            if (hasAlbumArtist) add(MediaStore.Audio.Media.ALBUM_ARTIST)
         }.toTypedArray()
         val tracks = mutableListOf<Track>()
         try {
@@ -76,6 +78,11 @@ class MediaStoreScanner @Inject constructor(
                 } else {
                     -1
                 }
+                val albumArtistCol = if (hasAlbumArtist) {
+                    cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ARTIST)
+                } else {
+                    -1
+                }
 
                 while (cursor.moveToNext()) {
                     tracks += Track(
@@ -92,6 +99,11 @@ class MediaStoreScanner @Inject constructor(
                         path = cursor.getString(dataCol) ?: "",
                         sizeBytes = cursor.getLong(sizeCol),
                         bitrate = if (bitrateCol >= 0) cursor.getInt(bitrateCol) else 0,
+                        albumArtist = if (albumArtistCol >= 0) {
+                            cursor.getString(albumArtistCol)?.repairMojibake().orEmpty()
+                        } else {
+                            ""
+                        },
                     )
                 }
             }

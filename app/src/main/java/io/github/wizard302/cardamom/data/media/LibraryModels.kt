@@ -21,6 +21,8 @@ data class Track(
     val sizeBytes: Long,
     /** Bitrate in bits per second; 0 when unknown (MediaStore reports it from API 29). */
     val bitrate: Int,
+    /** ALBUMARTIST tag; empty when absent or below API 30, where MediaStore lacks it. */
+    val albumArtist: String = "",
 ) {
     val contentUri: Uri
         get() = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id)

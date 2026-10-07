@@ -23,6 +23,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -52,11 +54,12 @@ class LibraryRepository @Inject constructor(
             list.groupBy { it.albumId }
                 .map { (albumId, ts) ->
                     val first = ts.first()
+                    val artist = albumArtistOf(ts)
                     Album(
                         id = albumId,
                         title = first.album,
-                        artist = first.artist,
-                        artistId = first.artistId,
+                        artist = artist,
+                        artistId = ts.firstOrNull { it.artist == artist }?.artistId ?: first.artistId,
                         year = ts.maxOf { it.year },
                         trackCount = ts.size,
                         artUri = first.albumArtUri,
@@ -129,13 +132,27 @@ class LibraryRepository @Inject constructor(
         } ?: emptyList()
     }
 
+    // Scans run one at a time, in request order: two overlapping ones could
+    // otherwise finish out of order and leave the older result in place.
+    private val scanMutex = Mutex()
+
     private suspend fun doScan() {
-        _allTracks.value = scanner.scanTracks()
+        scanMutex.withLock { _allTracks.value = scanner.scanTracks() }
     }
 }
 
-/** True when this track's file sits inside any of the [excludedFolders]. */
 private const val AWAIT_SCAN_TIMEOUT_MS = 5_000L
 
+/**
+ * Who an album is by: its ALBUMARTIST tag when any track has one, otherwise
+ * the artist most of its tracks share — not whichever track sorted first,
+ * which made compilations look like one guest's album.
+ */
+internal fun albumArtistOf(tracks: List<Track>): String =
+    tracks.firstOrNull { it.albumArtist.isNotBlank() }?.albumArtist
+        ?: tracks.groupingBy { it.artist }.eachCount().maxByOrNull { it.value }?.key
+        ?: ""
+
+/** True when this track's file sits inside any of the [excludedFolders]. */
 private fun Track.isUnder(excludedFolders: Set<String>): Boolean =
     excludedFolders.any { path == it || path.startsWith("$it/") }
