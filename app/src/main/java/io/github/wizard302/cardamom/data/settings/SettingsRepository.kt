@@ -1,6 +1,7 @@
 package io.github.wizard302.cardamom.data.settings
 
 import android.content.Context
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
@@ -10,6 +11,7 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -28,6 +30,14 @@ private val Context.settingsDataStore by preferencesDataStore(name = "settings")
 class SettingsRepository @Inject constructor(
     @ApplicationContext private val context: Context,
 ) {
+    /**
+     * One setting as a flow. DataStore re-emits the whole file on every write,
+     * so without distinctUntilChanged moving an equalizer slider would wake
+     * every collector of every unrelated setting.
+     */
+    private fun <T> preference(read: (Preferences) -> T): Flow<T> =
+        context.settingsDataStore.data.map(read).distinctUntilChanged()
+
     private val themeModeKey = stringPreferencesKey("theme_mode")
     private val syncedLyricsKey = booleanPreferencesKey("synced_lyrics_highlighting")
     private val dynamicColorKey = booleanPreferencesKey("dynamic_color")
@@ -47,27 +57,27 @@ class SettingsRepository @Inject constructor(
     private val excludedFoldersKey = stringSetPreferencesKey("excluded_folders")
     private val libraryTabKey = intPreferencesKey("library_tab")
 
-    val themeMode: Flow<ThemeMode> = context.settingsDataStore.data.map { prefs ->
+    val themeMode: Flow<ThemeMode> = preference { prefs ->
         ThemeMode.entries.firstOrNull { it.name == prefs[themeModeKey] } ?: ThemeMode.SYSTEM
     }
 
     /** "Synced lyrics highlighting" — karaoke mode; on by default. */
-    val syncedLyricsHighlighting: Flow<Boolean> = context.settingsDataStore.data.map { prefs ->
+    val syncedLyricsHighlighting: Flow<Boolean> = preference { prefs ->
         prefs[syncedLyricsKey] ?: true
     }
 
     /** Material You colors on API 31+; ignored below that. */
-    val dynamicColor: Flow<Boolean> = context.settingsDataStore.data.map { prefs ->
+    val dynamicColor: Flow<Boolean> = preference { prefs ->
         prefs[dynamicColorKey] ?: true
     }
 
     /** Pause when headphones are unplugged or Bluetooth audio drops. On by default. */
-    val pauseOnDisconnect: Flow<Boolean> = context.settingsDataStore.data.map { prefs ->
+    val pauseOnDisconnect: Flow<Boolean> = preference { prefs ->
         prefs[pauseOnDisconnectKey] ?: true
     }
 
     /** Resume playback when wired headphones are plugged back in. Off by default. */
-    val resumeOnConnect: Flow<Boolean> = context.settingsDataStore.data.map { prefs ->
+    val resumeOnConnect: Flow<Boolean> = preference { prefs ->
         prefs[resumeOnConnectKey] ?: false
     }
 
@@ -87,7 +97,7 @@ class SettingsRepository @Inject constructor(
      * One global playback speed (1.0 = normal), applied by PlaybackService on
      * start and updated whenever the user moves the speed slider.
      */
-    val playbackSpeed: Flow<Float> = context.settingsDataStore.data.map { prefs ->
+    val playbackSpeed: Flow<Float> = preference { prefs ->
         prefs[playbackSpeedKey] ?: 1f
     }
 
@@ -96,12 +106,12 @@ class SettingsRepository @Inject constructor(
     }
 
     /** Volume leveling from ReplayGain tags; off by default. */
-    val rgMode: Flow<ReplayGainMode> = context.settingsDataStore.data.map { prefs ->
+    val rgMode: Flow<ReplayGainMode> = preference { prefs ->
         ReplayGainMode.entries.firstOrNull { it.name == prefs[rgModeKey] } ?: ReplayGainMode.OFF
     }
 
     /** Extra gain applied on top of the tag value, −15..+15 dB. */
-    val rgPreampDb: Flow<Float> = context.settingsDataStore.data.map { prefs ->
+    val rgPreampDb: Flow<Float> = preference { prefs ->
         (prefs[rgPreampKey] ?: 0f).coerceIn(RG_PREAMP_MIN_DB, RG_PREAMP_MAX_DB)
     }
 
@@ -115,15 +125,15 @@ class SettingsRepository @Inject constructor(
         }
     }
 
-    val trackSort: Flow<TrackSort> = context.settingsDataStore.data.map { prefs ->
+    val trackSort: Flow<TrackSort> = preference { prefs ->
         TrackSort.entries.firstOrNull { it.name == prefs[trackSortKey] } ?: TrackSort.TITLE
     }
 
-    val albumSort: Flow<AlbumSort> = context.settingsDataStore.data.map { prefs ->
+    val albumSort: Flow<AlbumSort> = preference { prefs ->
         AlbumSort.entries.firstOrNull { it.name == prefs[albumSortKey] } ?: AlbumSort.TITLE
     }
 
-    val artistSort: Flow<ArtistSort> = context.settingsDataStore.data.map { prefs ->
+    val artistSort: Flow<ArtistSort> = preference { prefs ->
         ArtistSort.entries.firstOrNull { it.name == prefs[artistSortKey] } ?: ArtistSort.NAME
     }
 
@@ -145,11 +155,11 @@ class SettingsRepository @Inject constructor(
      * count (ignored on restore if the device reports a different count). Bass boost
      * and virtualizer strengths are 0..1000.
      */
-    val eqEnabled: Flow<Boolean> = context.settingsDataStore.data.map { it[eqEnabledKey] ?: false }
-    val eqPreset: Flow<Int> = context.settingsDataStore.data.map { it[eqPresetKey] ?: -1 }
-    val eqBands: Flow<String> = context.settingsDataStore.data.map { it[eqBandsKey] ?: "" }
-    val bassBoost: Flow<Int> = context.settingsDataStore.data.map { it[bassBoostKey] ?: 0 }
-    val virtualizer: Flow<Int> = context.settingsDataStore.data.map { it[virtualizerKey] ?: 0 }
+    val eqEnabled: Flow<Boolean> = preference { it[eqEnabledKey] ?: false }
+    val eqPreset: Flow<Int> = preference { it[eqPresetKey] ?: -1 }
+    val eqBands: Flow<String> = preference { it[eqBandsKey] ?: "" }
+    val bassBoost: Flow<Int> = preference { it[bassBoostKey] ?: 0 }
+    val virtualizer: Flow<Int> = preference { it[virtualizerKey] ?: 0 }
 
     suspend fun setEqEnabled(enabled: Boolean) {
         context.settingsDataStore.edit { it[eqEnabledKey] = enabled }
@@ -176,7 +186,7 @@ class SettingsRepository @Inject constructor(
      * everything" (the default), so newly added folders are included until the
      * user opts them out. A track is skipped when its file sits under any of these.
      */
-    val excludedFolders: Flow<Set<String>> = context.settingsDataStore.data.map { prefs ->
+    val excludedFolders: Flow<Set<String>> = preference { prefs ->
         prefs[excludedFoldersKey] ?: emptySet()
     }
 
@@ -185,7 +195,7 @@ class SettingsRepository @Inject constructor(
     }
 
     /** Last-opened library tab index, restored on the next launch. */
-    val libraryTab: Flow<Int> = context.settingsDataStore.data.map { it[libraryTabKey] ?: 0 }
+    val libraryTab: Flow<Int> = preference { it[libraryTabKey] ?: 0 }
 
     suspend fun setLibraryTab(index: Int) {
         context.settingsDataStore.edit { it[libraryTabKey] = index }
