@@ -91,13 +91,13 @@ class MetadataRepository @Inject constructor(
         withContext(Dispatchers.IO) {
             val rel = musicBrainz.getRelease(releaseMbid)
             val albumArtist = rel.artistCredit.displayName()
-            val tracks = rel.media.flatMap { it.tracks }.map { track ->
+            val tracks = rel.media.releaseTrackOrder().map { track ->
                 ReleaseTrack(
                     position = track.position,
                     title = track.title,
                     artist = track.artistCredit.displayName().ifBlank { albumArtist },
                 )
-            }.sortedBy { it.position }
+            }
             AlbumReleaseDetail(
                 releaseMbid = rel.id,
                 title = rel.title,

@@ -72,7 +72,11 @@ data class MbReleaseFull(
 )
 
 @Serializable
-data class MbMedium(val tracks: List<MbTrack> = emptyList())
+data class MbMedium(
+    /** 1-based disc number within the release; 0 when MusicBrainz omits it. */
+    val position: Int = 0,
+    val tracks: List<MbTrack> = emptyList(),
+)
 
 @Serializable
 data class MbTrack(
@@ -80,6 +84,16 @@ data class MbTrack(
     val title: String = "",
     @SerialName("artist-credit") val artistCredit: List<MbArtistCredit> = emptyList(),
 )
+
+/**
+ * Every track of a release in play order: disc by disc, then by position on
+ * the disc. Track positions restart at 1 on each disc, so sorting the
+ * flattened list by position alone would interleave the discs.
+ */
+fun List<MbMedium>.releaseTrackOrder(): List<MbTrack> =
+    withIndex()
+        .sortedWith(compareBy({ it.value.position.takeIf { p -> p > 0 } ?: Int.MAX_VALUE }, { it.index }))
+        .flatMap { (_, medium) -> medium.tracks.sortedBy { it.position } }
 
 /** Joins an artist-credit list into a display string using its join phrases. */
 fun List<MbArtistCredit>.displayName(): String =
