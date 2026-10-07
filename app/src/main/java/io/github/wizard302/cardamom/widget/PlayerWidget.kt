@@ -9,9 +9,12 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.os.Handler
+import android.os.Looper
 import android.widget.RemoteViews
 import androidx.core.content.ContextCompat
 import androidx.media3.common.Player
+import androidx.media3.common.Timeline
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import io.github.wizard302.cardamom.MainActivity
@@ -22,6 +25,9 @@ private const val ACTION_TOGGLE = "io.github.wizard302.cardamom.widget.TOGGLE"
 private const val ACTION_NEXT = "io.github.wizard302.cardamom.widget.NEXT"
 private const val ACTION_PREVIOUS = "io.github.wizard302.cardamom.widget.PREVIOUS"
 private const val ARTWORK_TARGET_PX = 256
+
+// Well inside the ~10 s a goAsync() broadcast may run for.
+private const val QUEUE_RESTORE_TIMEOUT_MS = 5_000L
 
 /** Last known playback state, so the widget can be redrawn without a player. */
 data class WidgetState(
@@ -71,23 +77,63 @@ class PlayerWidget : AppWidgetProvider() {
             {
                 // Binder calls on one controller stay ordered, so the command is
                 // delivered before the release that follows it.
-                runCatching {
-                    val controller = future.get()
-                    when (action) {
-                        ACTION_TOGGLE -> if (controller.isPlaying) {
-                            controller.pause()
-                        } else {
-                            controller.play()
-                        }
-                        ACTION_NEXT -> controller.seekToNextMediaItem()
-                        ACTION_PREVIOUS -> controller.seekToPrevious()
-                    }
-                    controller.release()
+                val controller = runCatching { future.get() }.getOrNull()
+                if (controller == null) {
+                    pendingResult.finish()
+                    return@addListener
                 }
-                pendingResult.finish()
+                if (controller.mediaItemCount == 0) {
+                    // Cold start: the service restores the saved queue
+                    // asynchronously, and a command sent to the still-empty
+                    // player would be lost. Holding the controller also keeps
+                    // the service bound until the queue is back.
+                    runWhenQueueReady(controller) {
+                        runCatching { perform(controller, action) }
+                        controller.release()
+                        pendingResult.finish()
+                    }
+                } else {
+                    runCatching { perform(controller, action) }
+                    controller.release()
+                    pendingResult.finish()
+                }
             },
             ContextCompat.getMainExecutor(appContext),
         )
+    }
+
+    private fun perform(controller: MediaController, action: String) {
+        when (action) {
+            ACTION_TOGGLE -> if (controller.isPlaying) controller.pause() else controller.play()
+            ACTION_NEXT -> controller.seekToNextMediaItem()
+            ACTION_PREVIOUS -> controller.seekToPrevious()
+        }
+    }
+
+    /**
+     * Calls [block] once [controller] has a non-empty queue, or after
+     * [QUEUE_RESTORE_TIMEOUT_MS] when nothing gets restored (block then acts
+     * on the empty player, which is harmless). Main thread only.
+     */
+    private fun runWhenQueueReady(controller: MediaController, block: () -> Unit) {
+        val handler = Handler(Looper.getMainLooper())
+        var done = false
+        lateinit var listener: Player.Listener
+        val finish = {
+            if (!done) {
+                done = true
+                handler.removeCallbacksAndMessages(null)
+                controller.removeListener(listener)
+                block()
+            }
+        }
+        listener = object : Player.Listener {
+            override fun onTimelineChanged(timeline: Timeline, reason: Int) {
+                if (controller.mediaItemCount > 0) finish()
+            }
+        }
+        controller.addListener(listener)
+        handler.postDelayed({ finish() }, QUEUE_RESTORE_TIMEOUT_MS)
     }
 
     companion object {
