@@ -70,4 +70,30 @@ class ShuffleReorderTest {
         assertNull(moveInShuffle(listOf(0, 1), from = 0, to = 2))
         assertNull(moveInShuffle(listOf(0, 1), from = -1, to = 0))
     }
+
+    @Test
+    fun `restored shuffle order is kept when every track survived`() {
+        val order = listOf(2, 0, 3, 1)
+        assertArrayEquals(
+            intArrayOf(2, 0, 3, 1),
+            restoreShuffleOrder(order, listOf(true, true, true, true)),
+        )
+    }
+
+    @Test
+    fun `restored shuffle order drops missing tracks and renumbers the rest`() {
+        // Saved queue 0..4, track 1 is gone: 2->1, 3->2, 4->3.
+        val order = listOf(3, 1, 4, 0, 2)
+        assertArrayEquals(
+            intArrayOf(2, 3, 0, 1),
+            restoreShuffleOrder(order, listOf(true, false, true, true, true)),
+        )
+    }
+
+    @Test
+    fun `restored shuffle order that does not match the queue is rejected`() {
+        assertNull(restoreShuffleOrder(emptyList(), listOf(true, true)))
+        assertNull(restoreShuffleOrder(listOf(0, 0), listOf(true, true)))
+        assertNull(restoreShuffleOrder(listOf(0, 2), listOf(true, true)))
+    }
 }

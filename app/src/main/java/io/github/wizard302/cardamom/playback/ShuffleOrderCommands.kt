@@ -77,3 +77,17 @@ fun moveInShuffle(order: List<Int>, from: Int, to: Int): IntArray? {
     if (from !in order.indices || to !in order.indices) return null
     return order.toMutableList().apply { add(to, removeAt(from)) }.toIntArray()
 }
+
+/**
+ * Maps a saved shuffle [order] (indices into the saved queue) onto the restored
+ * queue, where only the entries flagged in [survived] made it back. Returns the
+ * order as indices into the restored queue, or null when [order] does not
+ * describe the saved queue.
+ */
+fun restoreShuffleOrder(order: List<Int>, survived: List<Boolean>): IntArray? {
+    if (order.size != survived.size || order.sorted() != survived.indices.toList()) return null
+    val newIndex = IntArray(survived.size)
+    var next = 0
+    survived.forEachIndexed { i, kept -> newIndex[i] = if (kept) next++ else -1 }
+    return order.filter { survived[it] }.map { newIndex[it] }.toIntArray()
+}

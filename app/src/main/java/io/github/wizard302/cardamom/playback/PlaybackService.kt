@@ -48,8 +48,9 @@ import javax.inject.Inject
  * through a MediaController (see PlayerConnection). Media3 provides the media
  * notification, MediaButton/Bluetooth handling and lock-screen controls.
  *
- * The queue and position are persisted to DataStore (QueueStateStore) on pause,
- * track change and queue edits, and restored on cold service start.
+ * The queue, position and shuffle order are persisted to DataStore
+ * (QueueStateStore) on pause, track change and queue edits, and restored on cold
+ * service start together with the shuffle and repeat modes.
  */
 @OptIn(FlowPreview::class)
 @AndroidEntryPoint
@@ -96,6 +97,15 @@ class PlaybackService : MediaSessionService() {
 
         override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
             refreshWidget()
+        }
+
+        override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
+            saveModes()
+            saveQueueState()
+        }
+
+        override fun onRepeatModeChanged(repeatMode: Int) {
+            saveModes()
         }
     }
 
@@ -427,7 +437,7 @@ class PlaybackService : MediaSessionService() {
                 }
         }
 
-        scope.launch { restoreQueueState(player) }
+        scope.launch { restorePlaybackState(player) }
         scope.launch {
             saveRequests.debounce(1_000).collect { persistQueueState() }
         }
@@ -437,24 +447,73 @@ class PlaybackService : MediaSessionService() {
         saveRequests.tryEmit(Unit)
     }
 
-    /** Reads the player on Main (collector context) and persists to DataStore. */
-    private suspend fun persistQueueState() {
+    private fun saveModes() {
         val player = mediaSession?.player ?: return
-        val ids = List(player.mediaItemCount) { i ->
-            player.getMediaItemAt(i).mediaId.toLongOrNull()
-        }.filterNotNull()
-        val index = player.currentMediaItemIndex
-        val position = player.currentPosition.coerceAtLeast(0L)
-        queueStateStore.save(ids, index, position)
+        val shuffle = player.shuffleModeEnabled
+        val repeat = player.repeatMode
+        scope.launch { queueStateStore.saveModes(shuffle, repeat) }
     }
 
-    private suspend fun restoreQueueState(player: Player) {
-        val saved = queueStateStore.load() ?: return
+    /** Reads the player on Main (collector context) and persists to DataStore. */
+    private suspend fun persistQueueState() {
+        val player = mediaSession?.player as? ExoPlayer ?: return
+        writeQueueState(player, skipEmpty = false)
+    }
+
+    /**
+     * Saves the queue, position and — with shuffle on — the shuffled play order,
+     * stored as indices into the saved track ids.
+     */
+    @OptIn(UnstableApi::class)
+    private suspend fun writeQueueState(player: ExoPlayer, skipEmpty: Boolean) {
+        val timelineIds = List(player.mediaItemCount) { i ->
+            player.getMediaItemAt(i).mediaId.toLongOrNull()
+        }
+        val ids = timelineIds.filterNotNull()
+        if (skipEmpty && ids.isEmpty()) return
+        var next = 0
+        val savedIndex = timelineIds.map { if (it != null) next++ else -1 }
+        val shuffleOrder = if (player.shuffleModeEnabled) {
+            shufflePlayOrder(player)?.map { savedIndex[it] }?.filter { it >= 0 }.orEmpty()
+        } else {
+            emptyList()
+        }
+        queueStateStore.save(
+            ids,
+            player.currentMediaItemIndex,
+            player.currentPosition.coerceAtLeast(0L),
+            shuffleOrder,
+        )
+    }
+
+    /**
+     * Restores the saved queue, then the shuffle and repeat modes. Shuffle is
+     * switched on after the queue is in place, and the saved shuffled order is
+     * applied last so it wins over the reorder that switching shuffle on does.
+     */
+    @OptIn(UnstableApi::class)
+    private suspend fun restorePlaybackState(player: ExoPlayer) {
+        val modes = queueStateStore.loadModes()
+        val shuffleOrder = restoreQueueState(player)
+        player.repeatMode = modes.repeatMode
+        player.shuffleModeEnabled = modes.shuffleEnabled
+        if (modes.shuffleEnabled && shuffleOrder != null &&
+            shuffleOrder.size == player.mediaItemCount
+        ) {
+            player.setShuffleOrder(
+                ShuffleOrder.DefaultShuffleOrder(shuffleOrder, System.nanoTime()),
+            )
+        }
+    }
+
+    /** Restores the saved queue and returns its saved shuffle order, if any. */
+    private suspend fun restoreQueueState(player: Player): IntArray? {
+        val saved = queueStateStore.load() ?: return null
         // A controller may have set a queue while we were loading.
-        if (player.mediaItemCount > 0) return
+        if (player.mediaItemCount > 0) return null
         val tracksById = scanner.scanTracks().associateBy { it.id }
         val items = saved.trackIds.mapNotNull { tracksById[it]?.toMediaItem() }
-        if (items.isEmpty()) return
+        if (items.isEmpty()) return null
         // Account for tracks that disappeared before the saved index.
         val survivingBefore = saved.trackIds
             .take(saved.index.coerceAtMost(saved.trackIds.size))
@@ -466,6 +525,7 @@ class PlaybackService : MediaSessionService() {
         )
         player.playWhenReady = false
         player.prepare()
+        return restoreShuffleOrder(saved.shuffleOrder, saved.trackIds.map { it in tracksById })
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? =
@@ -479,20 +539,9 @@ class PlaybackService : MediaSessionService() {
     }
 
     override fun onDestroy() {
-        mediaSession?.player?.let { player ->
-            val ids = List(player.mediaItemCount) { i ->
-                player.getMediaItemAt(i).mediaId.toLongOrNull()
-            }.filterNotNull()
-            if (ids.isNotEmpty()) {
-                // Last chance to persist; a small synchronous write is acceptable here.
-                runBlocking {
-                    queueStateStore.save(
-                        ids,
-                        player.currentMediaItemIndex,
-                        player.currentPosition.coerceAtLeast(0L),
-                    )
-                }
-            }
+        (mediaSession?.player as? ExoPlayer)?.let { player ->
+            // Last chance to persist; a small synchronous write is acceptable here.
+            runBlocking { writeQueueState(player, skipEmpty = true) }
         }
         audioEffects.release()
         headphoneWatcher?.unregister()
