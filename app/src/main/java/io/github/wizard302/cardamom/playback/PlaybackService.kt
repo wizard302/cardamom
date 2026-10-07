@@ -514,6 +514,8 @@ class PlaybackService : MediaSessionService() {
         val tracksById = scanner.scanTracks().associateBy { it.id }
         val items = saved.trackIds.mapNotNull { tracksById[it]?.toMediaItem() }
         if (items.isEmpty()) return null
+        // The scan takes a while; the user may have started something meanwhile.
+        if (player.mediaItemCount > 0) return null
         // Account for tracks that disappeared before the saved index.
         val survivingBefore = saved.trackIds
             .take(saved.index.coerceAtMost(saved.trackIds.size))
