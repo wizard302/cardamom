@@ -103,4 +103,55 @@ class M3uMatcherTest {
         )
         assertNull(result.single().track)
     }
+
+    private val sameNameLibrary = listOf(
+        track(10, "/music/rock/song.mp3"),
+        track(11, "/music/jazz/song.mp3"),
+    )
+
+    @Test
+    fun `resolves parent-relative entries exactly`() {
+        val result = M3uMatcher.match(
+            listOf(ParsedM3uEntry("../jazz/song.mp3", null, null, null)),
+            sameNameLibrary,
+            playlistDir = "/music/playlists",
+        )
+        assertEquals(11L, result.single().track?.id)
+    }
+
+    @Test
+    fun `understands Windows separators`() {
+        val result = M3uMatcher.match(
+            listOf(ParsedM3uEntry("..\\rock\\song.mp3", null, null, null)),
+            sameNameLibrary,
+            playlistDir = "/music/playlists",
+        )
+        assertEquals(10L, result.single().track?.id)
+    }
+
+    @Test
+    fun `suffix-matches Windows absolute paths`() {
+        val result = M3uMatcher.match(
+            listOf(ParsedM3uEntry("D:\\Library\\jazz\\song.mp3", null, null, null)),
+            sameNameLibrary,
+            playlistDir = "/music/playlists",
+        )
+        assertEquals(11L, result.single().track?.id)
+    }
+
+    @Test
+    fun `decodes file URLs`() {
+        val library = listOf(track(12, "/music/my song+1.mp3"))
+        val result = M3uMatcher.match(
+            listOf(ParsedM3uEntry("file:///music/my%20song+1.mp3", null, null, null)),
+            library,
+        )
+        assertEquals(12L, result.single().track?.id)
+    }
+
+    @Test
+    fun `collapses dot segments without climbing above root`() {
+        assertEquals("/b.mp3", M3uMatcher.collapseDots("/a/../../b.mp3"))
+        assertEquals("/a/b.mp3", M3uMatcher.collapseDots("/a/./b.mp3"))
+    }
 }

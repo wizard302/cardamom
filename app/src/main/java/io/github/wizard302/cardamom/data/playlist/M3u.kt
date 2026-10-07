@@ -138,17 +138,54 @@ object M3uMatcher {
         val base = playlistDir?.trimEnd('/')
 
         return entries.map { entry ->
+            val path = normalizeEntryPath(entry.path)
             val absolute = when {
-                entry.path.startsWith('/') -> entry.path
-                base != null -> "$base/${entry.path}"
-                else -> entry.path
+                path.startsWith('/') || WINDOWS_DRIVE.containsMatchIn(path) -> path
+                base != null -> "$base/$path"
+                else -> path
             }
-            val track = byPath[absolute]
-                ?: suffixMatch(entry.path, byName)
+            val track = byPath[collapseDots(absolute)]
+                ?: suffixMatch(path, byName)
                 ?: metadataMatch(entry, library)
             M3uMatch(entry, track)
         }
     }
+
+    private val WINDOWS_DRIVE = Regex("^[A-Za-z]:/")
+
+    /**
+     * Makes playlists written elsewhere comparable with MediaStore paths:
+     * Windows separators become `/`, and `file://` URLs become plain
+     * (percent-decoded) paths.
+     */
+    internal fun normalizeEntryPath(raw: String): String {
+        var path = raw.replace('\\', '/')
+        if (path.startsWith("file://", ignoreCase = true)) {
+            path = percentDecode(path.substring("file://".length))
+        }
+        return path
+    }
+
+    /** Resolves `.` and `..` segments, so `/music/a/../b.mp3` matches `/music/b.mp3`. */
+    internal fun collapseDots(path: String): String {
+        val segments = ArrayDeque<String>()
+        for (segment in path.split('/')) {
+            val last = segments.lastOrNull()
+            when {
+                segment == "." -> Unit
+                // ".." at the root of an absolute path stays at the root.
+                segment == ".." && last == "" && segments.size == 1 -> Unit
+                segment == ".." && last != null && last != ".." -> segments.removeLast()
+                else -> segments.addLast(segment)
+            }
+        }
+        return segments.joinToString("/")
+    }
+
+    private fun percentDecode(s: String): String = runCatching {
+        // URLDecoder would also turn '+' into a space, which is legal in file names.
+        java.net.URLDecoder.decode(s.replace("+", "%2B"), "UTF-8")
+    }.getOrDefault(s)
 
     private fun suffixMatch(entryPath: String, byName: Map<String, List<Track>>): Track? {
         val fileName = entryPath.substringAfterLast('/')
