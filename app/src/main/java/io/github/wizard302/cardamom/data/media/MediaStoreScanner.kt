@@ -15,6 +15,24 @@ class MediaStoreScanner @Inject constructor(
     @ApplicationContext private val context: Context,
 ) {
     suspend fun scanTracks(): List<Track> = withContext(Dispatchers.IO) {
+        query(selection = null, selectionArgs = null)
+    }
+
+    /**
+     * Only the tracks with the given MediaStore [ids] — e.g. to rebuild a saved
+     * queue without scanning the whole library. Missing ids are simply absent.
+     */
+    suspend fun tracksByIds(ids: Collection<Long>): List<Track> = withContext(Dispatchers.IO) {
+        // Chunked to stay under SQLite's bound-parameter limit on older devices.
+        ids.distinct().chunked(MAX_QUERY_ARGS).flatMap { chunk ->
+            query(
+                selection = "${MediaStore.Audio.Media._ID} IN (${chunk.joinToString(",") { "?" }})",
+                selectionArgs = chunk.map { it.toString() }.toTypedArray(),
+            )
+        }
+    }
+
+    private fun query(selection: String?, selectionArgs: Array<String>?): List<Track> {
         val hasBitrate = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
         val projection = buildList {
             add(MediaStore.Audio.Media._ID)
@@ -36,8 +54,9 @@ class MediaStoreScanner @Inject constructor(
             context.contentResolver.query(
                 MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
                 projection,
-                "${MediaStore.Audio.Media.IS_MUSIC} != 0",
-                null,
+                listOfNotNull("${MediaStore.Audio.Media.IS_MUSIC} != 0", selection)
+                    .joinToString(" AND ") { "($it)" },
+                selectionArgs,
                 "${MediaStore.Audio.Media.TITLE} COLLATE NOCASE ASC",
             )?.use { cursor ->
                 val idCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
@@ -79,6 +98,10 @@ class MediaStoreScanner @Inject constructor(
         } catch (_: SecurityException) {
             // Permission not granted yet; caller shows the permission gate.
         }
-        tracks
+        return tracks
+    }
+
+    private companion object {
+        const val MAX_QUERY_ARGS = 500
     }
 }

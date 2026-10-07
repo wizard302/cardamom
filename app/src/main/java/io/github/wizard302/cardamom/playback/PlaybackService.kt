@@ -530,7 +530,7 @@ class PlaybackService : MediaSessionService() {
         val saved = queueStateStore.load() ?: return null
         // A controller may have set a queue while we were loading.
         if (player.mediaItemCount > 0) return null
-        val tracksById = scanner.scanTracks().associateBy { it.id }
+        val tracksById = scanner.tracksByIds(saved.trackIds).associateBy { it.id }
         val items = saved.trackIds.mapNotNull { tracksById[it]?.toMediaItem() }
         if (items.isEmpty()) return null
         // The scan takes a while; the user may have started something meanwhile.
