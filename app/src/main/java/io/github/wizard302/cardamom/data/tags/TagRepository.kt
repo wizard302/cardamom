@@ -32,26 +32,39 @@ class TagRepository @Inject constructor(
         runCatching {
             withTagLibFd(uri, "r") { fd ->
                 val metadata = TagLib.getMetadata(fd, readPictures = true) ?: return@withTagLibFd null
-                val pm = metadata.propertyMap
-                fun first(key: String) = pm[key]?.firstOrNull().orEmpty()
                 val cover = metadata.pictures
                     .firstOrNull { it.pictureType == FRONT_COVER }
                     ?: metadata.pictures.firstOrNull()
-                ReadResult(
-                    tags = TrackTags(
-                        title = first("TITLE"),
-                        artist = first("ARTIST"),
-                        album = first("ALBUM"),
-                        albumArtist = first("ALBUMARTIST"),
-                        trackNumber = first("TRACKNUMBER"),
-                        discNumber = first("DISCNUMBER"),
-                        year = first("DATE"),
-                        genre = first("GENRE"),
-                    ),
-                    cover = cover?.data,
-                )
+                ReadResult(tags = metadata.propertyMap.toTrackTags(), cover = cover?.data)
             }
         }.getOrNull()
+    }
+
+    /**
+     * The tag fields of [uri] without its pictures, or null on failure. Cheaper
+     * than [read] for batch edits, where embedded covers can run to megabytes
+     * per file and are not needed.
+     */
+    suspend fun readTags(uri: Uri): TrackTags? = withContext(Dispatchers.IO) {
+        runCatching {
+            withTagLibFd(uri, "r") { fd ->
+                TagLib.getMetadata(fd, readPictures = false)?.propertyMap?.toTrackTags()
+            }
+        }.getOrNull()
+    }
+
+    private fun Map<String, Array<String>>.toTrackTags(): TrackTags {
+        fun first(key: String) = this[key]?.firstOrNull().orEmpty()
+        return TrackTags(
+            title = first("TITLE"),
+            artist = first("ARTIST"),
+            album = first("ALBUM"),
+            albumArtist = first("ALBUMARTIST"),
+            trackNumber = first("TRACKNUMBER"),
+            discNumber = first("DISCNUMBER"),
+            year = first("DATE"),
+            genre = first("GENRE"),
+        )
     }
 
     /**

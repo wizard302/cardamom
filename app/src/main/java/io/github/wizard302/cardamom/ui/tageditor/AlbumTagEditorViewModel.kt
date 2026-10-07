@@ -134,7 +134,7 @@ class AlbumTagEditorViewModel @Inject constructor(
     private suspend fun applyToAllTracks(s: AlbumTagState): Boolean {
         var allOk = true
         for (track in tracks) {
-            val base = tagRepository.read(track.contentUri)?.tags
+            val base = tagRepository.readTags(track.contentUri)
             if (base == null) {
                 // An unreadable file stays unchanged; don't report success for it.
                 allOk = false

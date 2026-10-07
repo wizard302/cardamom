@@ -197,7 +197,7 @@ class AlbumFetcherViewModel @Inject constructor(
     ): Boolean {
         var allOk = true
         albumTracks.forEachIndexed { i, track ->
-            val base = tagRepository.read(track.contentUri)?.tags
+            val base = tagRepository.readTags(track.contentUri)
             if (base == null) {
                 // An unreadable file stays unchanged; don't report success for it.
                 allOk = false
