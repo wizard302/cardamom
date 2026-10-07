@@ -1,7 +1,10 @@
 package io.github.wizard302.cardamom.data.remote
 
+import io.github.wizard302.cardamom.data.tags.readAtMost
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.ResponseBody
+import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -116,7 +119,7 @@ class MetadataRepository @Inject constructor(
             if (releaseMbid != null) {
                 runCatching {
                     imageApi.fetch("https://coverartarchive.org/release/$releaseMbid/front-500")
-                        .use { it.bytes() }
+                        .use { it.imageBytes() }
                 }.getOrNull()?.let { return@withContext it }
             }
             val query = listOf(artist, title).filter { it.isNotBlank() }.joinToString(" ")
@@ -124,11 +127,23 @@ class MetadataRepository @Inject constructor(
             runCatching {
                 val coverUrl = deezer.search(query).data
                     .firstNotNullOfOrNull { it.album.coverXl?.takeIf(String::isNotBlank) }
-                coverUrl?.let { imageApi.fetch(it).use { body -> body.bytes() } }
+                coverUrl?.let { imageApi.fetch(it).use { body -> body.imageBytes() } }
             }.getOrNull()
         }
+
+    /**
+     * The body's bytes, refusing anything over [MAX_COVER_BYTES] so a wrong or
+     * hostile response cannot exhaust memory. A 500 px CAA thumbnail or a
+     * Deezer `cover_xl` is a few hundred kilobytes.
+     */
+    private fun ResponseBody.imageBytes(): ByteArray {
+        if (contentLength() > MAX_COVER_BYTES) throw IOException("Cover too large")
+        return byteStream().readAtMost(MAX_COVER_BYTES) ?: throw IOException("Cover too large")
+    }
 
     /** Escapes Lucene special characters that would break a MusicBrainz query. */
     private fun String.lucene(): String =
         replace("\\", "\\\\").replace("\"", "").trim()
 }
+
+private const val MAX_COVER_BYTES = 10 * 1024 * 1024

@@ -47,10 +47,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import io.github.wizard302.cardamom.R
+import io.github.wizard302.cardamom.data.tags.loadCoverForEmbedding
 import io.github.wizard302.cardamom.data.tags.TrackTags
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @Composable
 fun TagEditorScreen(
@@ -90,11 +89,7 @@ fun TagEditorScreen(
     ) { uri ->
         if (uri != null) {
             scope.launch {
-                val bytes = withContext(Dispatchers.IO) {
-                    context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
-                }
-                val mime = context.contentResolver.getType(uri) ?: "image/jpeg"
-                if (bytes != null) viewModel.replaceCover(bytes, mime)
+                loadCoverForEmbedding(context, uri)?.let { viewModel.replaceCover(it.data, it.mimeType) }
             }
         }
     }
