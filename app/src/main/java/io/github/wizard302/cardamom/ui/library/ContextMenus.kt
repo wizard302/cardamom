@@ -23,7 +23,7 @@ import java.util.Locale
 
 enum class TrackMenuAction {
     PLAY, PLAY_NEXT, ADD_TO_QUEUE, ADD_TO_PLAYLIST, GO_TO_ARTIST, GO_TO_ALBUM,
-    EDIT_TAGS, FETCH_METADATA, DETAILS;
+    EDIT_TAGS, FETCH_METADATA, SHARE, DETAILS;
 
     /** True when handling the action opens another screen rather than a dialog. */
     val navigatesAway: Boolean
@@ -71,6 +71,7 @@ fun TrackContextMenu(
         }
         MenuItem(R.string.menu_edit_tags) { onAction(TrackMenuAction.EDIT_TAGS); onDismiss() }
         MenuItem(R.string.menu_fetch_metadata) { onAction(TrackMenuAction.FETCH_METADATA); onDismiss() }
+        MenuItem(R.string.menu_share) { onAction(TrackMenuAction.SHARE); onDismiss() }
         MenuItem(R.string.menu_details) { onAction(TrackMenuAction.DETAILS); onDismiss() }
         extraItems()
     }

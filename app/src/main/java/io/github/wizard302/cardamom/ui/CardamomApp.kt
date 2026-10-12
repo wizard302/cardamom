@@ -86,6 +86,7 @@ import io.github.wizard302.cardamom.ui.settings.ScannedFoldersScreen
 import io.github.wizard302.cardamom.ui.settings.SettingsScreen
 import io.github.wizard302.cardamom.ui.tageditor.AlbumTagEditorScreen
 import io.github.wizard302.cardamom.ui.tageditor.TagEditorScreen
+import io.github.wizard302.cardamom.util.shareTrack
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -149,6 +150,7 @@ private fun MainNavigation(
     playerViewModel: PlayerViewModel,
 ) {
     val navController = rememberNavController()
+    val context = LocalContext.current
     var showNowPlaying by rememberSaveable { mutableStateOf(false) }
     var detailsTrack by remember { mutableStateOf<Track?>(null) }
     var addToPlaylistTracks by remember { mutableStateOf<List<Track>?>(null) }
@@ -179,6 +181,7 @@ private fun MainNavigation(
             TrackMenuAction.GO_TO_ALBUM -> navController.navigate("album/${track.albumId}")
             TrackMenuAction.EDIT_TAGS -> navController.navigate("tagEditor/${track.id}")
             TrackMenuAction.FETCH_METADATA -> navController.navigate("fetcher/${track.id}")
+            TrackMenuAction.SHARE -> context.shareTrack(track)
             TrackMenuAction.DETAILS -> detailsTrack = track
         }
     }

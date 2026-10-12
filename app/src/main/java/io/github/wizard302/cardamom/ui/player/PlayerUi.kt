@@ -76,6 +76,7 @@ private val NowPlayingActions = listOf(
     TrackMenuAction.GO_TO_ALBUM to R.string.menu_go_to_album,
     TrackMenuAction.EDIT_TAGS to R.string.menu_edit_tags,
     TrackMenuAction.FETCH_METADATA to R.string.menu_fetch_metadata,
+    TrackMenuAction.SHARE to R.string.menu_share,
     TrackMenuAction.DETAILS to R.string.menu_details,
 )
 
