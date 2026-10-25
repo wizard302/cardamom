@@ -83,6 +83,13 @@
     <string name="playlist_delete_confirm">Удалить «%s»? Треки останутся в медиатеке.</string>
     <string name="playlist_name_label">Название</string>
     <string name="add_to_playlist_title">Добавить в плейлист</string>
+    <string name="added_to_playlist_single">Добавлено в «%s»</string>
+    <plurals name="added_to_playlist">
+        <item quantity="one">%1$d трек добавлен в «%2$s»</item>
+        <item quantity="few">%1$d трека добавлены в «%2$s»</item>
+        <item quantity="many">%1$d треков добавлено в «%2$s»</item>
+        <item quantity="other">%1$d трека добавлено в «%2$s»</item>
+    </plurals>
     <string name="action_create">Создать</string>
     <string name="action_rename">Переименовать</string>
     <string name="action_delete">Удалить</string>

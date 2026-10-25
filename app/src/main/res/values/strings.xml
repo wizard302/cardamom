@@ -85,6 +85,11 @@
     <string name="playlist_delete_confirm">Delete “%s”? Tracks stay in your library.</string>
     <string name="playlist_name_label">Name</string>
     <string name="add_to_playlist_title">Add to playlist</string>
+    <string name="added_to_playlist_single">Added to “%s”</string>
+    <plurals name="added_to_playlist">
+        <item quantity="one">%1$d track added to “%2$s”</item>
+        <item quantity="other">%1$d tracks added to “%2$s”</item>
+    </plurals>
     <string name="action_create">Create</string>
     <string name="action_rename">Rename</string>
     <string name="action_delete">Delete</string>

@@ -1,5 +1,7 @@
 package io.github.wizard302.cardamom.ui.playlist
 
+import android.content.Context
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -25,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -146,6 +149,7 @@ fun AddToPlaylistDialog(
     viewModel: PlaylistViewModel = hiltViewModel(),
 ) {
     val playlists by viewModel.playlists.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     // Start on the name step when a name is suggested (e.g. creating from a folder).
     var creating by remember { mutableStateOf(suggestedName.isNotBlank()) }
 
@@ -156,6 +160,7 @@ fun AddToPlaylistDialog(
             initial = suggestedName,
             onConfirm = { name ->
                 viewModel.createPlaylistWith(name, tracks)
+                if (tracks.isNotEmpty()) showAddedToast(context, name.trim(), tracks.size)
                 onDone()
             },
             // Backing out of the name step drops to the existing-playlist list.
@@ -197,6 +202,7 @@ fun AddToPlaylistDialog(
                             .fillMaxWidth()
                             .clickable {
                                 viewModel.addToPlaylist(playlist.id, tracks)
+                                showAddedToast(context, playlist.name, tracks.size)
                                 onDone()
                             }
                             .padding(vertical = 12.dp),
@@ -234,4 +240,14 @@ fun AddToPlaylistDialog(
             TextButton(onClick = onDone) { Text(stringResource(R.string.action_cancel)) }
         },
     )
+}
+
+/** Confirms the add, since the dialog closes before the insert lands. */
+private fun showAddedToast(context: Context, playlistName: String, count: Int) {
+    val message = if (count == 1) {
+        context.getString(R.string.added_to_playlist_single, playlistName)
+    } else {
+        context.resources.getQuantityString(R.plurals.added_to_playlist, count, count, playlistName)
+    }
+    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
 }
