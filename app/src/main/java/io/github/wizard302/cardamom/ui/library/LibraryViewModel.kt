@@ -12,6 +12,7 @@ import io.github.wizard302.cardamom.data.settings.ArtistSort
 import io.github.wizard302.cardamom.data.settings.SettingsRepository
 import io.github.wizard302.cardamom.data.settings.TrackSort
 import io.github.wizard302.cardamom.playback.PlayerConnection
+import io.github.wizard302.cardamom.util.foldForSearch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,6 +22,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -51,20 +53,33 @@ class LibraryViewModel @Inject constructor(
      */
     private val appliedQuery = _query.debounce { if (it.isEmpty()) 0L else QUERY_DEBOUNCE_MS }
 
+    // Search keys are folded once per library change, not on every keystroke.
+    private val searchableTracks = repository.tracks.map { list ->
+        list.map { Searchable(it, searchKey(it.title, it.artist, it.album)) }
+    }.flowOn(Dispatchers.Default)
+
+    private val searchableAlbums = repository.albums.map { list ->
+        list.map { Searchable(it, searchKey(it.title, it.artist)) }
+    }.flowOn(Dispatchers.Default)
+
+    private val searchableArtists = repository.artists.map { list ->
+        list.map { Searchable(it, searchKey(it.name)) }
+    }.flowOn(Dispatchers.Default)
+
     // Filtering and sorting a large library is too slow for the main thread.
     val tracks: StateFlow<List<Track>> =
-        combine(repository.tracks, appliedQuery, trackSort) { list, query, sort ->
-            list.filter { it.matches(query) }.sortedFor(sort)
+        combine(searchableTracks, appliedQuery, trackSort) { list, query, sort ->
+            list.filterBy(query).sortedFor(sort)
         }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     val albums: StateFlow<List<Album>> =
-        combine(repository.albums, appliedQuery, albumSort) { list, query, sort ->
-            list.filter { it.matches(query) }.sortedFor(sort)
+        combine(searchableAlbums, appliedQuery, albumSort) { list, query, sort ->
+            list.filterBy(query).sortedFor(sort)
         }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     val artists: StateFlow<List<Artist>> =
-        combine(repository.artists, appliedQuery, artistSort) { list, query, sort ->
-            list.filter { it.matches(query) }.sortedFor(sort)
+        combine(searchableArtists, appliedQuery, artistSort) { list, query, sort ->
+            list.filterBy(query).sortedFor(sort)
         }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     /** Last-opened library tab, restored on launch; -1 until the store is read. */
@@ -114,19 +129,20 @@ class LibraryViewModel @Inject constructor(
             .sortedWith(compareBy({ it.album.lowercase() }, { it.trackNumber }))
 }
 
-private fun Track.matches(query: String): Boolean =
-    query.isBlank() ||
-        title.contains(query, ignoreCase = true) ||
-        artist.contains(query, ignoreCase = true) ||
-        album.contains(query, ignoreCase = true)
+/** A library item paired with its folded search text. */
+private class Searchable<T>(val item: T, val key: String)
 
-private fun Album.matches(query: String): Boolean =
-    query.isBlank() ||
-        title.contains(query, ignoreCase = true) ||
-        artist.contains(query, ignoreCase = true)
+// The separator keeps a query from matching across the end of one field and
+// the start of the next.
+private fun searchKey(vararg fields: String): String =
+    fields.joinToString("\u0000") { it.foldForSearch() }
 
-private fun Artist.matches(query: String): Boolean =
-    query.isBlank() || name.contains(query, ignoreCase = true)
+/** Accent- and case-insensitive substring filter; a blank query keeps everything. */
+private fun <T> List<Searchable<T>>.filterBy(query: String): List<T> {
+    val needle = query.trim().foldForSearch()
+    if (needle.isEmpty()) return map { it.item }
+    return mapNotNull { if (needle in it.key) it.item else null }
+}
 
 /**
  * Sorts by a key computed once per element: lowercasing inside a comparator
