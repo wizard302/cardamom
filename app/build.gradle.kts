@@ -33,8 +33,8 @@ android {
         applicationId = "io.github.wizard302.cardamom"
         minSdk = 26
         targetSdk = 37
-        versionCode = 10
-        versionName = "0.2.8"
+        versionCode = 11
+        versionName = "0.2.9"
     }
 
     signingConfigs {
